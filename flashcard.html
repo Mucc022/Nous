@@ -215,6 +215,33 @@
       gap: 7px;
     }
 
+    .status-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .status-chip {
+      border: 1px solid #d8c8b2;
+      border-radius: 999px;
+      background: #fff9f1;
+      color: #5d4836;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+
+    .status-chip:hover { transform: translateY(-1px); }
+
+    .status-chip.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
     .mode-btn {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -515,7 +542,7 @@
         </section>
 
         <section class="panel">
-          <h2 class="title">学习筛选</h2>
+          <h2 class="title">设置</h2>
           <div class="mode-row" id="modeRow"></div>
           <div class="form-grid">
             <label class="small" for="categoryFilter">分类筛选</label>
@@ -536,8 +563,8 @@
           <div class="stats">
             <div class="stat"><div class="small">当前</div><div class="num" id="currentIndex">0</div></div>
             <div class="stat"><div class="small">可练</div><div class="num" id="viewCount">0</div></div>
-            <div class="stat"><div class="small">已会</div><div class="num" id="knownCount">0</div></div>
-            <div class="stat"><div class="small">再练</div><div class="num" id="hardCount">0</div></div>
+            <div class="stat"><div class="small">计划中</div><div class="num" id="knownCount">0</div></div>
+            <div class="stat"><div class="small">未计划</div><div class="num" id="hardCount">0</div></div>
           </div>
 
           <div class="stats" style="margin-top:8px;">
@@ -563,6 +590,14 @@
       </aside>
 
       <main class="main">
+        <section class="panel">
+          <div class="row">
+            <h2 class="title">卡片状态</h2>
+            <span class="small">点击切换状态视图</span>
+          </div>
+          <div id="statusStrip" class="status-strip"></div>
+        </section>
+
         <section class="card-shell" id="flashWrap">
           <div id="flash" class="flash" title="点击翻面">
             <article class="face front">
@@ -687,11 +722,11 @@
     const REVIEW_INTERVAL_MINUTES = [10, 24 * 60, 3 * 24 * 60, 7 * 24 * 60, 14 * 24 * 60, 30 * 24 * 60];
 
     const MODES = [
-      { id: "all", label: "全部" },
+      { id: "planned", label: "计划中" },
+      { id: "unplanned", label: "未计划" },
       { id: "due", label: "到期" },
-      { id: "unknown", label: "未掌握" },
-      { id: "hard", label: "再练" },
-      { id: "known", label: "已会" }
+      { id: "completed", label: "已完成" },
+      { id: "all", label: "全部卡片" }
     ];
 
     const aiPromptTemplate = [
@@ -937,7 +972,7 @@
       if (!cur) {
         srsMap[cardId] = {
           level: 0,
-          nextReviewAt: new Date(0).toISOString(),
+          nextReviewAt: "",
           lastReviewedAt: "",
           reviewCount: 0
         };
@@ -948,10 +983,24 @@
       const lastTs = Date.parse(cur.lastReviewedAt || "");
       srsMap[cardId] = {
         level,
-        nextReviewAt: Number.isFinite(nextTs) ? new Date(nextTs).toISOString() : new Date(0).toISOString(),
+        nextReviewAt: Number.isFinite(nextTs) ? new Date(nextTs).toISOString() : "",
         lastReviewedAt: Number.isFinite(lastTs) ? new Date(lastTs).toISOString() : "",
         reviewCount: Math.max(0, Math.floor(Number(cur.reviewCount) || 0))
       };
+    }
+
+    function cardStatus(card, nowTs = Date.now()) {
+      ensureSrsRecord(card.id);
+      const rec = srsMap[card.id];
+      const reviewed = (Number(rec.reviewCount) || 0) > 0;
+      const due = reviewed && isCardDue(card.id, nowTs);
+      const completed = reviewed && !due && (Number(rec.level) || 0) >= 4;
+      const planned = reviewed && !due && !completed;
+      if (!reviewed) return "unplanned";
+      if (due) return "due";
+      if (completed) return "completed";
+      if (planned) return "planned";
+      return "planned";
     }
 
     function ensureStateIntegrity() {
@@ -1182,8 +1231,10 @@
 
     function isCardDue(cardId, nowTs = Date.now()) {
       ensureSrsRecord(cardId);
-      const dueTs = Date.parse(srsMap[cardId].nextReviewAt);
-      return !Number.isFinite(dueTs) || dueTs <= nowTs;
+      const rec = srsMap[cardId];
+      if ((Number(rec.reviewCount) || 0) <= 0) return false;
+      const dueTs = Date.parse(rec.nextReviewAt);
+      return Number.isFinite(dueTs) && dueTs <= nowTs;
     }
 
     function markReviewedSrs(cardId, remembered) {
@@ -1215,10 +1266,8 @@
         if (category !== "全部分类" && card.cat !== category) return false;
         if (dueOnly && !isCardDue(card.id, nowTs)) return false;
 
-        if (currentMode === "known" && !knownSet.has(card.id)) return false;
-        if (currentMode === "hard" && !hardSet.has(card.id)) return false;
-        if (currentMode === "unknown" && knownSet.has(card.id)) return false;
-        if (currentMode === "due" && !isCardDue(card.id, nowTs)) return false;
+        const status = cardStatus(card, nowTs);
+        if (currentMode !== "all" && status !== currentMode) return false;
 
         if (keyword) {
           const text = [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, ...(card.tags || [])].join(" ").toLowerCase();
@@ -1242,8 +1291,33 @@
       renderCard();
       renderStats();
       renderSrsPanel();
+      renderStatusStrip();
       renderCardList();
       renderEditorHint();
+    }
+
+    function renderStatusStrip() {
+      const box = $("statusStrip");
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      const nowTs = Date.now();
+      const countMap = { planned: 0, unplanned: 0, due: 0, completed: 0, all: deckCards.length };
+      deckCards.forEach(c => {
+        countMap[cardStatus(c, nowTs)]++;
+      });
+
+      box.innerHTML = "";
+      MODES.forEach(m => {
+        const btn = document.createElement("button");
+        btn.className = "status-chip" + (m.id === currentMode ? " active" : "");
+        btn.textContent = `${m.label} ${countMap[m.id] ?? 0}`;
+        btn.onclick = () => {
+          currentMode = m.id;
+          modeButtons();
+          saveData();
+          rebuildView(true);
+        };
+        box.appendChild(btn);
+      });
     }
 
     function renderTags(card) {
@@ -1281,10 +1355,18 @@
 
     function renderStats() {
       const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      const nowTs = Date.now();
+      let plannedCount = 0;
+      let unplannedCount = 0;
+      deckCards.forEach(c => {
+        const status = cardStatus(c, nowTs);
+        if (status === "planned") plannedCount++;
+        if (status === "unplanned") unplannedCount++;
+      });
       $("currentIndex").textContent = viewCards.length ? String(currentIndex + 1) : "0";
       $("viewCount").textContent = String(viewCards.length);
-      $("knownCount").textContent = String(deckCards.filter(c => knownSet.has(c.id)).length);
-      $("hardCount").textContent = String(deckCards.filter(c => hardSet.has(c.id)).length);
+      $("knownCount").textContent = String(plannedCount);
+      $("hardCount").textContent = String(unplannedCount);
       $("libraryCount").textContent = `${deckCards.length} 张`;
     }
 
@@ -1313,7 +1395,7 @@
         const rec = srsMap[c.id];
         const dueTs = Date.parse(rec.nextReviewAt);
 
-        if (!Number.isFinite(dueTs) || dueTs <= nowTs) dueNow++;
+        if ((Number(rec.reviewCount) || 0) > 0 && Number.isFinite(dueTs) && dueTs <= nowTs) dueNow++;
         if (Number.isFinite(dueTs) && dueTs <= todayEndTs) dueToday++;
         if ((Number(rec.level) || 0) >= 3) stable++;
         if (rec.lastReviewedAt && sameDay(rec.lastReviewedAt, nowIso)) reviewedToday++;
@@ -1444,7 +1526,7 @@
       cards.forEach(c => {
         fresh[c.id] = {
           level: 0,
-          nextReviewAt: new Date(0).toISOString(),
+          nextReviewAt: "",
           lastReviewedAt: "",
           reviewCount: 0
         };
