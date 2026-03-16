@@ -1,0 +1,2002 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>学习王闪卡工坊 V3</title>
+  <style>
+    :root {
+      --bg: #f3eee6;
+      --panel: #ffffff;
+      --text: #2d241d;
+      --muted: #77695c;
+      --line: #e5dac9;
+      --brand: #9f632c;
+      --good: #2f8a52;
+      --warn: #b64a3b;
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(24, 15, 8, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, #fffaf2 0%, transparent 33%),
+        radial-gradient(circle at 95% 10%, #f4ead8 0%, transparent 28%),
+        linear-gradient(180deg, #f8f4ed 0%, #efe4d5 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 18px 14px 30px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(120deg, #fffdf9 0%, #fbf4ea 100%);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .left {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .guide {
+      background: linear-gradient(130deg, #fffaf2 0%, #f6ebdc 100%);
+    }
+
+    .guide ol {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: #5d4d3f;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .tree-toolbar,
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    button,
+    select,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      padding: 8px 12px;
+      cursor: pointer;
+      position: relative;
+      overflow: visible;
+      transition: transform 120ms ease, filter 120ms ease;
+      box-shadow: 0 3px 10px rgba(28, 18, 10, 0.18);
+    }
+
+    button:hover { filter: brightness(1.06); }
+    button:active { transform: translateY(1px) scale(0.985); }
+
+    button.secondary {
+      background: #e8ddcd;
+      color: #433528;
+    }
+
+    button.good { background: var(--good); }
+    button.warn { background: var(--warn); }
+
+    button.ghost {
+      background: #fff;
+      color: #4a392b;
+      border: 1px solid #d8cbb9;
+      box-shadow: none;
+    }
+
+    button.clicked::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255,255,255,.55), transparent 62%);
+      animation: clickRipple .32s ease;
+      pointer-events: none;
+    }
+
+    .ribbon-burst {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .ribbon {
+      position: absolute;
+      width: 4px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--c, #fff);
+      opacity: 0;
+      transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+    }
+
+    .ribbon.fly { animation: ribbon .56s cubic-bezier(.2,.9,.2,1) forwards; }
+
+    .tree {
+      margin-top: 8px;
+      border: 1px solid #eadfce;
+      border-radius: 10px;
+      background: #fffdf9;
+      max-height: 240px;
+      overflow: auto;
+      padding: 6px;
+    }
+
+    .tree-row {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 5px 8px;
+      margin: 3px 0;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .tree-row.folder { color: #5a4635; }
+    .tree-row.deck { color: #3d2f25; }
+    .tree-row.active {
+      background: #f4ebde;
+      border-color: #dcc4a4;
+      font-weight: 700;
+    }
+
+    .mode-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+      gap: 7px;
+    }
+
+    .mode-btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: #4a3a2f;
+      padding: 8px 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .mode-btn.active {
+      background: #f8efe2;
+      border-color: #d9bd99;
+      font-weight: 700;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    select,
+    input[type="text"],
+    textarea,
+    .editor-box {
+      width: 100%;
+      border: 1px solid #dacdbd;
+      background: #fffdf9;
+      border-radius: 11px;
+      padding: 9px 10px;
+      color: #3c2f25;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .stats {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+    }
+
+    .stat {
+      border: 1px solid #eadfce;
+      border-radius: 10px;
+      background: #fcf8f2;
+      padding: 8px;
+    }
+
+    .stat .num {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .main {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .card-shell {
+      position: relative;
+      perspective: 1200px;
+      padding: 10px;
+      border-radius: 24px;
+      background: linear-gradient(130deg, #d9ebe5 0%, #fae6cc 48%, #d9e5f1 100%);
+      border: 1px solid #d6cbbd;
+      box-shadow: 0 16px 32px rgba(57, 41, 28, 0.12);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .card-shell::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.65) 50%, transparent 80%);
+      transform: translateX(-140%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .card-shell.switching::after { animation: sweep .48s ease; }
+
+    .flash {
+      position: relative;
+      min-height: 520px;
+      transform-style: preserve-3d;
+      transition: transform .45s ease;
+      cursor: pointer;
+    }
+
+    .flash.flipped { transform: rotateY(180deg); }
+    .flash.slide-next { animation: cardNext .26s ease; }
+    .flash.slide-prev { animation: cardPrev .26s ease; }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      border: 1px solid #d9d7d2;
+      border-radius: 20px;
+      background: #fffdf9;
+      box-shadow: var(--shadow);
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .face.front {
+      background: radial-gradient(circle at 90% 0%, rgba(255,233,190,.4), transparent 24%), #fffefb;
+    }
+
+    .face.back {
+      transform: rotateY(180deg);
+      background: radial-gradient(circle at 0% 100%, rgba(198,226,255,.36), transparent 26%), #fafdff;
+    }
+
+    .q {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1.45;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .a {
+      font-size: 24px;
+      line-height: 1.68;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #f1e8dc;
+      color: #62482f;
+      padding: 4px 9px;
+      margin: 0 6px 6px 0;
+      font-size: 12px;
+    }
+
+    .cloze {
+      background: #fff2a8;
+      border-bottom: 2px dashed #b27b00;
+      border-radius: 4px;
+      padding: 0 4px;
+      font-weight: 700;
+      color: #7c4f00;
+    }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .status {
+      margin-top: 6px;
+      min-height: 20px;
+      font-size: 13px;
+      color: #5a4a3b;
+    }
+
+    .status.error { color: #9f3024; }
+    .status.ok { color: #236f43; }
+
+    .editor-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .fmt-btn {
+      padding: 6px 10px;
+      font-size: 13px;
+      background: #efe4d2;
+      color: #3f3228;
+      border: 1px solid #d8c8b1;
+      box-shadow: none;
+    }
+
+    .editor-box {
+      min-height: 110px;
+      outline: none;
+      overflow: auto;
+    }
+
+    .editor-box:focus {
+      border-color: #c99b6a;
+      box-shadow: 0 0 0 2px rgba(201, 155, 106, 0.2);
+    }
+
+    .list {
+      margin-top: 8px;
+      max-height: 320px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+    }
+
+    .item {
+      border: 1px solid #eadfce;
+      border-radius: 12px;
+      padding: 10px;
+      background: #fffdf9;
+      cursor: pointer;
+    }
+
+    .item strong {
+      display: block;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @keyframes clickRipple {
+      from { opacity: .8; transform: scale(.25); }
+      to { opacity: 0; transform: scale(1.15); }
+    }
+
+    @keyframes ribbon {
+      0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot,0deg)) scale(.7); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--tx,0px)), calc(-50% + var(--ty,-24px))) rotate(calc(var(--rot,0deg) + 40deg)) scale(1); }
+    }
+
+    @keyframes sweep {
+      0% { transform: translateX(-140%); opacity: 0; }
+      18% { opacity: 1; }
+      100% { transform: translateX(140%); opacity: 0; }
+    }
+
+    @keyframes cardNext {
+      0% { transform: translateX(18px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes cardPrev {
+      0% { transform: translateX(-18px); }
+      100% { transform: translateX(0); }
+    }
+
+    @media (max-width: 1060px) {
+      .layout { grid-template-columns: 1fr; }
+      .work-grid { grid-template-columns: 1fr; }
+      .flash { min-height: 430px; }
+      .q { font-size: 27px; }
+      .a { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>学习王闪卡工坊 V3</h1>
+      <p>先建文件夹/卡组，再导入卡片。导入时你可以明确选择“追加到当前卡组 / 替换当前卡组 / 新建卡组导入”，避免后期混乱。</p>
+    </header>
+
+    <div class="layout">
+      <aside class="left">
+        <section class="panel guide">
+          <h2 class="title">第一次使用</h2>
+          <ol>
+            <li>先在「知识库结构」里新建文件夹与卡组（支持无限嵌套文件夹）。</li>
+            <li>在右侧导入区选择导入方式：追加、替换、或新建卡组导入。</li>
+            <li>卡片可在「卡片编辑器」中进行高亮、加粗、单词挖空并保存。</li>
+          </ol>
+        </section>
+
+        <section class="panel">
+          <h2 class="title">知识库结构</h2>
+          <div class="small" id="currentDeckPath">当前卡组：未选择</div>
+          <div class="tree-toolbar">
+            <button id="createFolderBtn" class="ghost">新建文件夹</button>
+            <button id="createDeckBtn" class="ghost">新建卡组</button>
+            <button id="renameDeckBtn" class="ghost">重命名卡组</button>
+          </div>
+          <div class="tree" id="treeWrap"></div>
+          <div class="small">提示：先点文件夹，再点“新建文件夹/卡组”，即可实现无限层级嵌套。</div>
+        </section>
+
+        <section class="panel">
+          <h2 class="title">学习筛选</h2>
+          <div class="mode-row" id="modeRow"></div>
+          <div class="form-grid">
+            <label class="small" for="categoryFilter">分类筛选</label>
+            <select id="categoryFilter"></select>
+
+            <label class="small" for="orderSelect">抽题顺序</label>
+            <select id="orderSelect">
+              <option value="normal">按添加顺序</option>
+              <option value="newest">最新优先</option>
+              <option value="random">随机</option>
+              <option value="hard">优先再练</option>
+            </select>
+
+            <label class="small" for="searchInput">关键词</label>
+            <input id="searchInput" type="text" placeholder="搜索题目/答案/标签" />
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="small">当前</div><div class="num" id="currentIndex">0</div></div>
+            <div class="stat"><div class="small">可练</div><div class="num" id="viewCount">0</div></div>
+            <div class="stat"><div class="small">已会</div><div class="num" id="knownCount">0</div></div>
+            <div class="stat"><div class="small">再练</div><div class="num" id="hardCount">0</div></div>
+          </div>
+
+          <div class="stats" style="margin-top:8px;">
+            <div class="stat"><div class="small">到期</div><div class="num" id="dueNowCount">0</div></div>
+            <div class="stat"><div class="small">今天到期</div><div class="num" id="dueTodayCount">0</div></div>
+            <div class="stat"><div class="small">今日复习</div><div class="num" id="reviewedTodayCount">0</div></div>
+            <div class="stat"><div class="small">稳定记忆(≥Lv3)</div><div class="num" id="stableCount">0</div></div>
+          </div>
+
+          <label class="small" style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+            <input id="dueOnlyToggle" type="checkbox" />
+            只看到期卡片
+          </label>
+          <div class="small" id="nextDueHint"></div>
+
+          <div class="toolbar">
+            <button id="resetProgressBtn" class="secondary">重置熟悉度</button>
+            <button id="exportDeckBtn" class="ghost">导出当前卡组分享包</button>
+            <button id="exportBtn" class="ghost">导出全部数据 JSON</button>
+          </div>
+          <div class="small">快捷键：Space 翻面，←/→ 切题，1 标记已会，2 标记再练。</div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <section class="card-shell" id="flashWrap">
+          <div id="flash" class="flash" title="点击翻面">
+            <article class="face front">
+              <div>
+                <div id="frontTags"></div>
+                <div id="question" class="q">请先选择或创建一个卡组，然后导入/新建卡片</div>
+              </div>
+              <div class="small">点击卡片翻面</div>
+            </article>
+            <article class="face back">
+              <div>
+                <div id="backTags"></div>
+                <div id="answer" class="a">答案会显示在这里</div>
+              </div>
+              <div class="small">再次点击返回题目</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="toolbar">
+            <button id="prevBtn" class="secondary">上一张</button>
+            <button id="flipBtn" class="secondary">翻面</button>
+            <button id="nextBtn">下一张</button>
+            <button id="knownBtn" class="good">我会了</button>
+            <button id="hardBtn" class="warn">再练</button>
+            <button id="deleteCurrentBtn" class="ghost">删除当前</button>
+          </div>
+        </section>
+
+        <section class="work-grid">
+          <article class="panel">
+            <div class="row">
+              <h2 class="title">AI 导入</h2>
+              <button id="copyPromptBtn" class="ghost">复制提示词</button>
+            </div>
+            <textarea id="promptTemplate" readonly></textarea>
+
+            <div class="form-grid" style="margin-top:8px;">
+              <label class="small" for="importModeSelect">导入方式</label>
+              <select id="importModeSelect">
+                <option value="append">追加到当前卡组（推荐）</option>
+                <option value="replace">替换当前卡组全部卡片</option>
+                <option value="newDeck">新建卡组并导入</option>
+              </select>
+              <div class="small" id="importTargetHint">目标卡组：未选择</div>
+              <div id="newDeckNameRow" style="display:none;">
+                <input id="newDeckNameInput" type="text" placeholder="新卡组名称（例如：英语-Unit 5）" />
+              </div>
+            </div>
+
+            <textarea id="bulkInput" placeholder="支持两种格式：
+1) ```json 代码块中的 JSON
+2) 每行一张卡：问题 | 答案 | 分类 | 标签1,标签2"></textarea>
+            <div class="toolbar">
+              <button id="importBtn">导入卡片</button>
+              <button id="clearInputBtn" class="secondary">清空输入</button>
+              <button id="copyExampleBtn" class="ghost">复制格式示例</button>
+            </div>
+            <div class="form-grid" style="margin-top:8px;">
+              <label class="small" for="packageImportModeSelect">分享包导入方式</label>
+              <select id="packageImportModeSelect">
+                <option value="append">追加到当前卡组（推荐）</option>
+                <option value="replace">覆盖当前卡组</option>
+              </select>
+              <label class="small" for="importPackageFile">导入分享包（JSON）</label>
+              <input id="importPackageFile" type="file" accept=".json,application/json" />
+            </div>
+            <div id="status" class="status"></div>
+          </article>
+
+          <article class="panel">
+            <div class="row">
+              <h2 class="title">卡片编辑器</h2>
+              <div class="small" id="editCardIdHint">当前：未选中卡片</div>
+            </div>
+
+            <div class="toolbar" style="margin-top:0;">
+              <button id="loadCurrentToEditorBtn" class="ghost">载入当前卡片</button>
+              <button id="newCardFromEditorBtn" class="ghost">新建卡片</button>
+            </div>
+
+            <div class="form-grid">
+              <input id="editCatInput" type="text" placeholder="分类（例如：语法-时态）" />
+              <input id="editTagsInput" type="text" placeholder="标签，用逗号分隔（例如：重点,必背）" />
+            </div>
+
+            <div class="editor-tools">
+              <button class="fmt-btn" data-cmd="bold">加粗</button>
+              <button class="fmt-btn" data-cmd="italic">斜体</button>
+              <button class="fmt-btn" data-cmd="underline">下划线</button>
+              <button class="fmt-btn" data-cmd="highlight">高亮</button>
+              <button class="fmt-btn" data-cmd="cloze">单词挖空</button>
+            </div>
+
+            <div class="small">问题（可编辑富文本）</div>
+            <div id="editQuestion" class="editor-box" contenteditable="true"></div>
+            <div class="small" style="margin-top:8px;">答案（可编辑富文本）</div>
+            <div id="editAnswer" class="editor-box" contenteditable="true"></div>
+
+            <div class="toolbar">
+              <button id="saveEditBtn">保存修改</button>
+            </div>
+            <div class="small">说明：挖空会把选中词替换成 <span class="cloze">_____</span>，答案保留在 `data-answer` 中。</div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="row">
+            <h2 class="title">当前卡组预览（点击跳转）</h2>
+            <span class="small" id="libraryCount">0 张</span>
+          </div>
+          <div id="cardList" class="list"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "studyking.flashcards.v3";
+    const LEGACY_CARDS_KEY = "studyking.flashcards.cards.v1";
+    const REVIEW_INTERVAL_MINUTES = [10, 24 * 60, 3 * 24 * 60, 7 * 24 * 60, 14 * 24 * 60, 30 * 24 * 60];
+
+    const MODES = [
+      { id: "all", label: "全部" },
+      { id: "due", label: "到期" },
+      { id: "unknown", label: "未掌握" },
+      { id: "hard", label: "再练" },
+      { id: "known", label: "已会" }
+    ];
+
+    const aiPromptTemplate = [
+      "你是一个闪卡内容生成器。",
+      "我会给你一个知识主题，请你把知识压缩成高质量复习闪卡。",
+      "",
+      "必须满足：",
+      "1. 只输出一个 ```json 代码块，不要任何额外解释。",
+      "2. JSON 必须是数组，每个元素必须包含字段：q, a, cat, tags。",
+      "3. q 是问题；a 是答案；cat 是分类；tags 是字符串数组。",
+      "4. 每张卡只考一个知识点。",
+      "",
+      "输出示例：",
+      "```json",
+      "[",
+      "  {",
+      "    \\\"q\\\": \\\"什么是牛顿第一定律？\\\",",
+      "    \\\"a\\\": \\\"若合外力为零，物体保持静止或匀速直线运动。\\\",",
+      "    \\\"cat\\\": \\\"物理-力学\\\",",
+      "    \\\"tags\\\": [\\\"经典力学\\\", \\\"基础\\\"]",
+      "  }",
+      "]",
+      "```",
+      "",
+      "现在请针对主题生成：{{在这里填你的主题}}"
+    ].join("\n");
+
+    const lineExample = [
+      "遗忘曲线的核心结论是什么？ | 如果不复习，记忆会随时间显著衰减。 | 学习方法 | 记忆,复习",
+      "什么是主动回忆？ | 不看答案先回想，再核对并纠错。 | 学习方法 | 高效学习"
+    ].join("\n");
+
+    const $ = id => document.getElementById(id);
+
+    let folders = [];
+    let decks = [];
+    let cards = [];
+    let knownSet = new Set();
+    let hardSet = new Set();
+    let srsMap = {};
+
+    let selectedFolderId = "root";
+    let selectedDeckId = null;
+    let currentMode = "all";
+    let currentIndex = 0;
+    let viewCards = [];
+    let activeEditorId = "editQuestion";
+
+    function uid(prefix = "id") {
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      })[m]);
+    }
+
+    function textToHtml(text) {
+      return escapeHtml(String(text || "")).replace(/\n/g, "<br>");
+    }
+
+    function htmlToText(html) {
+      const div = document.createElement("div");
+      div.innerHTML = html || "";
+      return (div.textContent || "").trim();
+    }
+
+    function normalizeTags(raw) {
+      if (Array.isArray(raw)) return raw.map(x => String(x).trim()).filter(Boolean);
+      return String(raw || "")
+        .split(/[，,、;；]/)
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    function sanitizeRichHtml(inputHtml) {
+      const template = document.createElement("template");
+      template.innerHTML = inputHtml || "";
+      const allowed = new Set(["B", "STRONG", "I", "EM", "U", "MARK", "SPAN", "BR", "P", "DIV", "UL", "OL", "LI"]);
+
+      const cleanNode = node => {
+        if (node.nodeType === Node.TEXT_NODE) return;
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          node.remove();
+          return;
+        }
+
+        const el = node;
+        const tag = el.tagName;
+
+        if (!allowed.has(tag)) {
+          const text = document.createTextNode(el.textContent || "");
+          el.replaceWith(text);
+          return;
+        }
+
+        [...el.attributes].forEach(attr => {
+          const n = attr.name.toLowerCase();
+          if (tag === "SPAN" && n === "class") {
+            if (el.className !== "cloze") el.removeAttribute("class");
+            return;
+          }
+          if (tag === "SPAN" && n === "data-answer") {
+            el.setAttribute("data-answer", String(el.getAttribute("data-answer") || "").slice(0, 120));
+            return;
+          }
+          el.removeAttribute(attr.name);
+        });
+
+        if (tag === "SPAN" && el.className === "cloze" && !el.getAttribute("data-answer")) {
+          el.setAttribute("data-answer", "");
+        }
+
+        [...el.childNodes].forEach(cleanNode);
+      };
+
+      [...template.content.childNodes].forEach(cleanNode);
+      return template.innerHTML;
+    }
+
+    function setStatus(text, type = "") {
+      $("status").textContent = text;
+      $("status").className = "status" + (type ? ` ${type}` : "");
+    }
+
+    function migrateFromLegacy() {
+      let legacyCards = [];
+      try {
+        const raw = localStorage.getItem(LEGACY_CARDS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        legacyCards = Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        legacyCards = [];
+      }
+
+      const defaultDeckId = uid("d");
+      decks = [{ id: defaultDeckId, name: "默认卡组", folderId: "root", createdAt: new Date().toISOString() }];
+      folders = [];
+
+      if (legacyCards.length) {
+        cards = legacyCards
+          .map(item => {
+            const q = String(item.q ?? item.question ?? "").trim();
+            const a = String(item.a ?? item.answer ?? "").trim();
+            if (!q || !a) return null;
+            return {
+              id: uid("c"),
+              deckId: defaultDeckId,
+              qHtml: textToHtml(q),
+              aHtml: textToHtml(a),
+              cat: String(item.cat ?? item.category ?? "未分类").trim() || "未分类",
+              tags: normalizeTags(item.tags),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+          })
+          .filter(Boolean);
+      }
+
+      if (!cards.length) {
+        cards = [
+          {
+            id: uid("c"),
+            deckId: defaultDeckId,
+            qHtml: textToHtml("学习一个新概念后，第一轮复习应该怎么做？"),
+            aHtml: textToHtml("先主动回忆，再对照答案补漏。"),
+            cat: "学习方法",
+            tags: ["入门", "主动回忆"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: uid("c"),
+            deckId: defaultDeckId,
+            qHtml: textToHtml("番茄工作法的一轮常见时长是？"),
+            aHtml: textToHtml("25 分钟专注 + 5 分钟休息。"),
+            cat: "时间管理",
+            tags: ["番茄钟"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ];
+      }
+
+      knownSet = new Set();
+      hardSet = new Set();
+      srsMap = {};
+      selectedFolderId = "root";
+      selectedDeckId = defaultDeckId;
+      currentMode = "all";
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          migrateFromLegacy();
+          ensureStateIntegrity();
+          saveData();
+          return;
+        }
+
+        const state = JSON.parse(raw);
+        folders = Array.isArray(state.folders) ? state.folders : [];
+        decks = Array.isArray(state.decks) ? state.decks : [];
+        cards = Array.isArray(state.cards) ? state.cards : [];
+        knownSet = new Set(Array.isArray(state.known) ? state.known : []);
+        hardSet = new Set(Array.isArray(state.hard) ? state.hard : []);
+        srsMap = state.srsMap && typeof state.srsMap === "object" ? state.srsMap : {};
+        selectedFolderId = state.selectedFolderId || "root";
+        selectedDeckId = state.selectedDeckId || null;
+        currentMode = MODES.some(m => m.id === state.currentMode) ? state.currentMode : "all";
+        ensureStateIntegrity();
+      } catch (_) {
+        migrateFromLegacy();
+        ensureStateIntegrity();
+      }
+    }
+
+    function saveData() {
+      const state = {
+        version: 3,
+        folders,
+        decks,
+        cards,
+        known: [...knownSet],
+        hard: [...hardSet],
+        srsMap,
+        selectedFolderId,
+        selectedDeckId,
+        currentMode
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function ensureSrsRecord(cardId) {
+      const cur = srsMap[cardId];
+      if (!cur) {
+        srsMap[cardId] = {
+          level: 0,
+          nextReviewAt: new Date(0).toISOString(),
+          lastReviewedAt: "",
+          reviewCount: 0
+        };
+        return;
+      }
+      const level = Math.max(0, Math.min(REVIEW_INTERVAL_MINUTES.length - 1, Math.floor(Number(cur.level) || 0)));
+      const nextTs = Date.parse(cur.nextReviewAt || "");
+      const lastTs = Date.parse(cur.lastReviewedAt || "");
+      srsMap[cardId] = {
+        level,
+        nextReviewAt: Number.isFinite(nextTs) ? new Date(nextTs).toISOString() : new Date(0).toISOString(),
+        lastReviewedAt: Number.isFinite(lastTs) ? new Date(lastTs).toISOString() : "",
+        reviewCount: Math.max(0, Math.floor(Number(cur.reviewCount) || 0))
+      };
+    }
+
+    function ensureStateIntegrity() {
+      const folderIds = new Set(["root", ...folders.map(f => f.id)]);
+      decks = decks
+        .filter(d => d && d.id)
+        .map(d => ({ ...d, folderId: folderIds.has(d.folderId) ? d.folderId : "root" }));
+
+      if (!decks.length) {
+        const id = uid("d");
+        decks = [{ id, name: "默认卡组", folderId: "root", createdAt: new Date().toISOString() }];
+      }
+
+      const deckIds = new Set(decks.map(d => d.id));
+      cards = cards
+        .filter(c => c && c.id)
+        .map(c => ({
+          id: c.id,
+          deckId: deckIds.has(c.deckId) ? c.deckId : decks[0].id,
+          qHtml: sanitizeRichHtml(c.qHtml || textToHtml(c.q || "")) || textToHtml("(空问题)"),
+          aHtml: sanitizeRichHtml(c.aHtml || textToHtml(c.a || "")) || textToHtml("(空答案)"),
+          cat: String(c.cat || "未分类").trim() || "未分类",
+          tags: normalizeTags(c.tags),
+          createdAt: c.createdAt || new Date().toISOString(),
+          updatedAt: c.updatedAt || new Date().toISOString()
+        }));
+
+      const cardIds = new Set(cards.map(c => c.id));
+      knownSet = new Set([...knownSet].filter(id => cardIds.has(id)));
+      hardSet = new Set([...hardSet].filter(id => cardIds.has(id)));
+
+      const cleanedSrs = {};
+      cards.forEach(c => {
+        ensureSrsRecord(c.id);
+        cleanedSrs[c.id] = srsMap[c.id];
+      });
+      srsMap = cleanedSrs;
+
+      if (!folderIds.has(selectedFolderId)) selectedFolderId = "root";
+      if (!deckIds.has(selectedDeckId)) selectedDeckId = decks[0].id;
+    }
+
+    function getDeckById(id) {
+      return decks.find(d => d.id === id) || null;
+    }
+
+    function getFolderById(id) {
+      if (id === "root") return { id: "root", name: "根目录" };
+      return folders.find(f => f.id === id) || null;
+    }
+
+    function folderChildren(parentId) {
+      return folders
+        .filter(f => (f.parentId || "root") === parentId)
+        .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
+    }
+
+    function deckChildren(folderId) {
+      return decks
+        .filter(d => (d.folderId || "root") === folderId)
+        .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
+    }
+
+    function getFolderPath(folderId) {
+      const names = [];
+      let cur = folderId || "root";
+      while (cur && cur !== "root") {
+        const f = getFolderById(cur);
+        if (!f) break;
+        names.unshift(f.name);
+        cur = f.parentId || "root";
+      }
+      return names.length ? names.join(" / ") : "根目录";
+    }
+
+    function getDeckPath(deckId) {
+      const deck = getDeckById(deckId);
+      if (!deck) return "未选择";
+      return `${getFolderPath(deck.folderId)} / ${deck.name}`;
+    }
+
+    function renderTree() {
+      const wrap = $("treeWrap");
+      wrap.innerHTML = "";
+
+      const renderBranch = (parentId, depth) => {
+        folderChildren(parentId).forEach(folder => {
+          const row = document.createElement("div");
+          row.className = "tree-row folder" + (selectedFolderId === folder.id ? " active" : "");
+          row.style.paddingLeft = `${8 + depth * 16}px`;
+          row.innerHTML = `📁 ${escapeHtml(folder.name)}`;
+          row.onclick = () => {
+            selectedFolderId = folder.id;
+            saveData();
+            renderTree();
+            renderCurrentDeckPath();
+          };
+          wrap.appendChild(row);
+
+          deckChildren(folder.id).forEach(deck => {
+            const dRow = document.createElement("div");
+            dRow.className = "tree-row deck" + (selectedDeckId === deck.id ? " active" : "");
+            dRow.style.paddingLeft = `${26 + depth * 16}px`;
+            dRow.innerHTML = `🗂 ${escapeHtml(deck.name)}`;
+            dRow.onclick = () => {
+              selectedDeckId = deck.id;
+              selectedFolderId = folder.id;
+              saveData();
+              renderTree();
+              renderCurrentDeckPath();
+              rebuildView(true);
+            };
+            wrap.appendChild(dRow);
+          });
+
+          renderBranch(folder.id, depth + 1);
+        });
+      };
+
+      deckChildren("root").forEach(deck => {
+        const dRow = document.createElement("div");
+        dRow.className = "tree-row deck" + (selectedDeckId === deck.id ? " active" : "");
+        dRow.style.paddingLeft = "8px";
+        dRow.innerHTML = `🗂 ${escapeHtml(deck.name)}`;
+        dRow.onclick = () => {
+          selectedDeckId = deck.id;
+          selectedFolderId = "root";
+          saveData();
+          renderTree();
+          renderCurrentDeckPath();
+          rebuildView(true);
+        };
+        wrap.appendChild(dRow);
+      });
+
+      renderBranch("root", 0);
+    }
+
+    function renderCurrentDeckPath() {
+      $("currentDeckPath").textContent = `当前卡组：${getDeckPath(selectedDeckId)}`;
+      $("importTargetHint").textContent = `目标卡组：${getDeckPath(selectedDeckId)}`;
+    }
+
+    function createFolder() {
+      const name = prompt("新文件夹名称：");
+      if (!name || !name.trim()) return;
+      folders.push({
+        id: uid("f"),
+        name: name.trim(),
+        parentId: selectedFolderId || "root",
+        createdAt: new Date().toISOString()
+      });
+      saveData();
+      renderTree();
+      setStatus("已创建文件夹", "ok");
+    }
+
+    function createDeck(customName = "") {
+      const finalName = customName || prompt("新卡组名称：") || "";
+      if (!finalName.trim()) return null;
+      const deck = {
+        id: uid("d"),
+        name: finalName.trim(),
+        folderId: selectedFolderId || "root",
+        createdAt: new Date().toISOString()
+      };
+      decks.push(deck);
+      selectedDeckId = deck.id;
+      saveData();
+      renderTree();
+      renderCurrentDeckPath();
+      rebuildView(true);
+      setStatus(`已创建卡组：${deck.name}`, "ok");
+      return deck;
+    }
+
+    function renameDeck() {
+      const deck = getDeckById(selectedDeckId);
+      if (!deck) {
+        setStatus("请先选择一个卡组", "error");
+        return;
+      }
+      const name = prompt("新的卡组名称：", deck.name);
+      if (!name || !name.trim()) return;
+      deck.name = name.trim();
+      saveData();
+      renderTree();
+      renderCurrentDeckPath();
+      rebuildView(false);
+      setStatus("卡组已重命名", "ok");
+    }
+    function cardTextKey(card) {
+      return [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, card.deckId]
+        .map(x => String(x).trim().toLowerCase())
+        .join("||");
+    }
+
+    function modeButtons() {
+      const box = $("modeRow");
+      box.innerHTML = "";
+      MODES.forEach(m => {
+        const b = document.createElement("button");
+        b.className = "mode-btn" + (m.id === currentMode ? " active" : "");
+        b.textContent = m.label;
+        b.onclick = () => {
+          currentMode = m.id;
+          saveData();
+          modeButtons();
+          rebuildView(true);
+        };
+        box.appendChild(b);
+      });
+    }
+
+    function rebuildCategoryFilter() {
+      const sel = $("categoryFilter");
+      const old = sel.value || "全部分类";
+      const list = ["全部分类", ...new Set(cards.filter(c => c.deckId === selectedDeckId).map(c => c.cat))];
+      sel.innerHTML = "";
+      list.forEach(c => {
+        const op = document.createElement("option");
+        op.value = c;
+        op.textContent = c;
+        sel.appendChild(op);
+      });
+      sel.value = list.includes(old) ? old : "全部分类";
+    }
+
+    function isCardDue(cardId, nowTs = Date.now()) {
+      ensureSrsRecord(cardId);
+      const dueTs = Date.parse(srsMap[cardId].nextReviewAt);
+      return !Number.isFinite(dueTs) || dueTs <= nowTs;
+    }
+
+    function markReviewedSrs(cardId, remembered) {
+      ensureSrsRecord(cardId);
+      const now = Date.now();
+      let level = Number(srsMap[cardId].level) || 0;
+      level = remembered
+        ? Math.min(level + 1, REVIEW_INTERVAL_MINUTES.length - 1)
+        : Math.max(level - 1, 0);
+
+      const nextMins = remembered ? REVIEW_INTERVAL_MINUTES[level] : REVIEW_INTERVAL_MINUTES[0];
+      srsMap[cardId] = {
+        level,
+        nextReviewAt: new Date(now + nextMins * 60 * 1000).toISOString(),
+        lastReviewedAt: new Date(now).toISOString(),
+        reviewCount: (Number(srsMap[cardId].reviewCount) || 0) + 1
+      };
+    }
+
+    function rebuildView(resetIndex = false) {
+      const order = $("orderSelect").value || "normal";
+      const category = $("categoryFilter").value || "全部分类";
+      const keyword = $("searchInput").value.trim().toLowerCase();
+      const dueOnly = $("dueOnlyToggle").checked;
+      const nowTs = Date.now();
+
+      let list = cards.filter(card => {
+        if (card.deckId !== selectedDeckId) return false;
+        if (category !== "全部分类" && card.cat !== category) return false;
+        if (dueOnly && !isCardDue(card.id, nowTs)) return false;
+
+        if (currentMode === "known" && !knownSet.has(card.id)) return false;
+        if (currentMode === "hard" && !hardSet.has(card.id)) return false;
+        if (currentMode === "unknown" && knownSet.has(card.id)) return false;
+        if (currentMode === "due" && !isCardDue(card.id, nowTs)) return false;
+
+        if (keyword) {
+          const text = [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, ...(card.tags || [])].join(" ").toLowerCase();
+          if (!text.includes(keyword)) return false;
+        }
+        return true;
+      });
+
+      if (order === "newest") {
+        list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      } else if (order === "random") {
+        list = [...list].sort(() => Math.random() - 0.5);
+      } else if (order === "hard") {
+        list = [...list].sort((a, b) => Number(hardSet.has(b.id)) - Number(hardSet.has(a.id)));
+      }
+
+      viewCards = list;
+      if (resetIndex) currentIndex = 0;
+      if (currentIndex >= viewCards.length) currentIndex = Math.max(0, viewCards.length - 1);
+
+      renderCard();
+      renderStats();
+      renderSrsPanel();
+      renderCardList();
+      renderEditorHint();
+    }
+
+    function renderTags(card) {
+      const tags = [card.cat, ...(card.tags || [])].filter(Boolean);
+      return tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+    }
+
+    function renderCard() {
+      const flash = $("flash");
+      flash.classList.remove("flipped");
+
+      if (!selectedDeckId) {
+        $("question").textContent = "请先创建并选择卡组";
+        $("answer").textContent = "然后导入或新建卡片";
+        $("frontTags").innerHTML = "";
+        $("backTags").innerHTML = "";
+        return;
+      }
+
+      if (!viewCards.length) {
+        $("question").textContent = "当前筛选条件下没有卡片";
+        $("answer").textContent = "你可以调整筛选，或导入/新建卡片";
+        $("frontTags").innerHTML = "";
+        $("backTags").innerHTML = "";
+        return;
+      }
+
+      const card = viewCards[currentIndex];
+      $("question").innerHTML = card.qHtml;
+      $("answer").innerHTML = card.aHtml;
+      const t = renderTags(card);
+      $("frontTags").innerHTML = t;
+      $("backTags").innerHTML = t;
+    }
+
+    function renderStats() {
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      $("currentIndex").textContent = viewCards.length ? String(currentIndex + 1) : "0";
+      $("viewCount").textContent = String(viewCards.length);
+      $("knownCount").textContent = String(deckCards.filter(c => knownSet.has(c.id)).length);
+      $("hardCount").textContent = String(deckCards.filter(c => hardSet.has(c.id)).length);
+      $("libraryCount").textContent = `${deckCards.length} 张`;
+    }
+
+    function sameDay(tsA, tsB) {
+      const a = new Date(tsA);
+      const b = new Date(tsB);
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function renderSrsPanel() {
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      const nowTs = Date.now();
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      const todayEndTs = todayEnd.getTime();
+      const nowIso = new Date(nowTs).toISOString();
+
+      let dueNow = 0;
+      let dueToday = 0;
+      let reviewedToday = 0;
+      let stable = 0;
+      let nextDue = Number.POSITIVE_INFINITY;
+
+      deckCards.forEach(c => {
+        ensureSrsRecord(c.id);
+        const rec = srsMap[c.id];
+        const dueTs = Date.parse(rec.nextReviewAt);
+
+        if (!Number.isFinite(dueTs) || dueTs <= nowTs) dueNow++;
+        if (Number.isFinite(dueTs) && dueTs <= todayEndTs) dueToday++;
+        if ((Number(rec.level) || 0) >= 3) stable++;
+        if (rec.lastReviewedAt && sameDay(rec.lastReviewedAt, nowIso)) reviewedToday++;
+        if (Number.isFinite(dueTs) && dueTs > nowTs && dueTs < nextDue) nextDue = dueTs;
+      });
+
+      $("dueNowCount").textContent = String(dueNow);
+      $("dueTodayCount").textContent = String(dueToday);
+      $("reviewedTodayCount").textContent = String(reviewedToday);
+      $("stableCount").textContent = String(stable);
+
+      if (dueNow > 0) {
+        $("nextDueHint").textContent = `已有 ${dueNow} 张到期，建议切换到“到期”模式。`;
+      } else if (Number.isFinite(nextDue)) {
+        const d = new Date(nextDue);
+        $("nextDueHint").textContent = `下一次到期：${d.getMonth() + 1}-${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      } else {
+        $("nextDueHint").textContent = "暂无复习计划，开始学习后会自动生成。";
+      }
+    }
+
+    function renderCardList() {
+      const box = $("cardList");
+      box.innerHTML = "";
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+
+      if (!deckCards.length) {
+        const div = document.createElement("div");
+        div.className = "small";
+        div.textContent = "当前卡组为空。";
+        box.appendChild(div);
+        return;
+      }
+
+      deckCards.forEach((card, index) => {
+        const item = document.createElement("div");
+        item.className = "item";
+        const dueLabel = isCardDue(card.id) ? "到期" : `Lv${srsMap[card.id]?.level ?? 0}`;
+        item.innerHTML = `
+          <strong>${index + 1}. ${escapeHtml(htmlToText(card.qHtml).slice(0, 88))}</strong>
+          <div class="small">${escapeHtml(card.cat)}${card.tags.length ? " · " + escapeHtml(card.tags.join(", ")) : ""} · ${dueLabel}</div>
+        `;
+        item.onclick = () => jumpToCard(card.id);
+        box.appendChild(item);
+      });
+    }
+
+    function jumpToCard(cardId) {
+      let index = viewCards.findIndex(c => c.id === cardId);
+      if (index < 0) {
+        currentMode = "all";
+        modeButtons();
+        rebuildView(true);
+        index = viewCards.findIndex(c => c.id === cardId);
+      }
+      if (index >= 0) {
+        currentIndex = index;
+        renderCard();
+        renderStats();
+        renderEditorHint();
+        setStatus("已跳转到所选卡片", "ok");
+      }
+    }
+
+    function animateSwitch(direction) {
+      const wrap = $("flashWrap");
+      const flash = $("flash");
+      wrap.classList.remove("switching");
+      flash.classList.remove("slide-next", "slide-prev");
+      void wrap.offsetWidth;
+      void flash.offsetWidth;
+      wrap.classList.add("switching");
+      flash.classList.add(direction === "prev" ? "slide-prev" : "slide-next");
+      setTimeout(() => {
+        wrap.classList.remove("switching");
+        flash.classList.remove("slide-next", "slide-prev");
+      }, 520);
+    }
+
+    function nextCard(playAnimation = true) {
+      if (!viewCards.length) return;
+      currentIndex = (currentIndex + 1) % viewCards.length;
+      if (playAnimation) animateSwitch("next");
+      renderCard();
+      renderStats();
+      renderEditorHint();
+    }
+
+    function prevCard(playAnimation = true) {
+      if (!viewCards.length) return;
+      currentIndex = (currentIndex - 1 + viewCards.length) % viewCards.length;
+      if (playAnimation) animateSwitch("prev");
+      renderCard();
+      renderStats();
+      renderEditorHint();
+    }
+
+    function flipCard() {
+      $("flash").classList.toggle("flipped");
+    }
+
+    function markKnown() {
+      if (!viewCards.length) return;
+      const id = viewCards[currentIndex].id;
+      knownSet.add(id);
+      hardSet.delete(id);
+      markReviewedSrs(id, true);
+      saveData();
+      nextCard(true);
+      renderSrsPanel();
+    }
+
+    function markHard() {
+      if (!viewCards.length) return;
+      const id = viewCards[currentIndex].id;
+      hardSet.add(id);
+      knownSet.delete(id);
+      markReviewedSrs(id, false);
+      saveData();
+      nextCard(true);
+      renderSrsPanel();
+    }
+
+    function resetProgress() {
+      knownSet = new Set();
+      hardSet = new Set();
+      const fresh = {};
+      cards.forEach(c => {
+        fresh[c.id] = {
+          level: 0,
+          nextReviewAt: new Date(0).toISOString(),
+          lastReviewedAt: "",
+          reviewCount: 0
+        };
+      });
+      srsMap = fresh;
+      saveData();
+      rebuildView(false);
+      setStatus("熟悉度与复习计划已重置", "ok");
+    }
+
+    function deleteCurrentCard() {
+      if (!viewCards.length) return;
+      const card = viewCards[currentIndex];
+      if (!confirm(`确认删除这张卡片？\n\n${htmlToText(card.qHtml).slice(0, 100)}`)) return;
+
+      cards = cards.filter(c => c.id !== card.id);
+      knownSet.delete(card.id);
+      hardSet.delete(card.id);
+      delete srsMap[card.id];
+      saveData();
+      rebuildCategoryFilter();
+      rebuildView(false);
+      setStatus("已删除当前卡片", "ok");
+    }
+
+    function exportData() {
+      const data = {
+        folders,
+        decks,
+        cards,
+        known: [...knownSet],
+        hard: [...hardSet],
+        srsMap,
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `flashcards-v3-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("已导出当前数据 JSON", "ok");
+    }
+
+    function normalizeImportedCard(item) {
+      const q = String(item?.q ?? item?.question ?? "").trim();
+      const a = String(item?.a ?? item?.answer ?? "").trim();
+      if (!q || !a) return null;
+      return {
+        q,
+        a,
+        cat: String(item?.cat ?? item?.category ?? "分享导入").trim() || "分享导入",
+        tags: normalizeTags(item?.tags)
+      };
+    }
+
+    function exportCurrentDeckPackage() {
+      if (!selectedDeckId) {
+        setStatus("请先选择一个卡组", "error");
+        return;
+      }
+      const deck = getDeckById(selectedDeckId);
+      if (!deck) {
+        setStatus("当前卡组不存在", "error");
+        return;
+      }
+
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      const payload = {
+        version: "deck-package-v1",
+        exportedAt: new Date().toISOString(),
+        deckMeta: {
+          name: deck.name,
+          sourceDeckId: deck.id,
+          folderPath: getFolderPath(deck.folderId),
+          cardCount: deckCards.length
+        },
+        cards: deckCards.map(c => ({
+          q: htmlToText(c.qHtml),
+          a: htmlToText(c.aHtml),
+          cat: c.cat,
+          tags: c.tags
+        }))
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      const safeDeckName = deck.name.replace(/[\\/:*?\"<>|]/g, "_");
+      a.href = URL.createObjectURL(blob);
+      a.download = `deck-share-${safeDeckName}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus(`已导出分享包：${deckCards.length} 张`, "ok");
+    }
+
+    function parseDeckPackage(rawText) {
+      const parsed = JSON.parse(String(rawText || "").replace(/^\uFEFF/, "").trim());
+      if (!parsed || typeof parsed !== "object") throw new Error("分享包不是有效 JSON");
+      if (!Array.isArray(parsed.cards)) throw new Error("分享包缺少 cards 数组");
+
+      const normalizedCards = parsed.cards.map(normalizeImportedCard).filter(Boolean);
+      if (!normalizedCards.length) throw new Error("分享包中没有可导入的有效卡片");
+
+      return {
+        deckMeta: parsed.deckMeta && typeof parsed.deckMeta === "object" ? parsed.deckMeta : {},
+        cards: normalizedCards
+      };
+    }
+
+    function buildCardForDeck(deckId, item) {
+      return {
+        id: uid("c"),
+        deckId,
+        qHtml: textToHtml(item.q),
+        aHtml: textToHtml(item.a),
+        cat: item.cat,
+        tags: item.tags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    async function importDeckPackageFromFile(file) {
+      if (!selectedDeckId) {
+        setStatus("请先选择一个卡组再导入分享包", "error");
+        return;
+      }
+      if (!file) {
+        setStatus("请选择一个 JSON 分享包文件", "error");
+        return;
+      }
+
+      let pkg;
+      try {
+        const text = await file.text();
+        pkg = parseDeckPackage(text);
+      } catch (err) {
+        setStatus(`分享包解析失败：${err.message}`, "error");
+        return;
+      }
+
+      const mode = $("packageImportModeSelect").value || "append";
+      const targetDeckId = selectedDeckId;
+
+      if (mode === "replace") {
+        if (!confirm("将覆盖当前卡组，确认继续？")) return;
+        removeCardsByDeck(targetDeckId);
+      }
+
+      const existingKeys = new Set(cards.filter(c => c.deckId === targetDeckId).map(cardTextKey));
+      const batchKeys = new Set();
+      const toAdd = [];
+      let duplicateCount = 0;
+
+      pkg.cards.forEach(item => {
+        const card = buildCardForDeck(targetDeckId, item);
+        const key = cardTextKey(card);
+        if (existingKeys.has(key) || batchKeys.has(key)) {
+          duplicateCount++;
+          return;
+        }
+        toAdd.push(card);
+        batchKeys.add(key);
+      });
+
+      cards = [...cards, ...toAdd];
+      toAdd.forEach(c => ensureSrsRecord(c.id));
+      saveData();
+      rebuildCategoryFilter();
+      rebuildView(true);
+
+      const sourceName = String(pkg.deckMeta?.name || "分享包");
+      const modeText = mode === "replace" ? "覆盖" : "追加";
+      setStatus(`分享包导入成功：${modeText}新增 ${toAdd.length} 张，跳过重复 ${duplicateCount} 张（来源：${sourceName}）`, "ok");
+    }
+
+    function extractCodeBlock(text) {
+      const matched = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      return matched ? matched[1].trim() : text.trim();
+    }
+
+    function parseJsonImport(text) {
+      const cleaned = text.replace(/^\uFEFF/, "").replace(/^#?\s*FLASHCARD_V1\s*/i, "").trim();
+      const parsed = JSON.parse(cleaned);
+      const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.cards) ? parsed.cards : null);
+      if (!arr) throw new Error("JSON 结构必须是数组，或包含 cards 数组");
+      const normalized = arr
+        .map(item => normalizeImportedCard(item))
+        .filter(Boolean);
+      if (!normalized.length) throw new Error("JSON 解析成功，但没有有效卡片（需包含 q 和 a）");
+      return normalized;
+    }
+
+    function parsePipeImport(text) {
+      const cardsFromLines = [];
+      const errors = [];
+      text.split(/\r?\n/).forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed || /^(#|\/\/)/.test(trimmed)) return;
+        const parts = trimmed.split("|").map(x => x.trim());
+        if (parts.length < 2) {
+          errors.push(`第 ${index + 1} 行缺少分隔符 |`);
+          return;
+        }
+        const q = parts[0];
+        const a = parts[1];
+        if (!q || !a) {
+          errors.push(`第 ${index + 1} 行缺少问题或答案`);
+          return;
+        }
+        cardsFromLines.push(normalizeImportedCard({
+          q,
+          a,
+          cat: parts[2] || "AI导入",
+          tags: normalizeTags(parts[3] || "")
+        }));
+      });
+      if (!cardsFromLines.length) {
+        const reason = errors.length ? errors.slice(0, 3).join("；") : "没有识别到有效行";
+        throw new Error(`行格式解析失败：${reason}`);
+      }
+      return cardsFromLines;
+    }
+
+    function parseImport(raw) {
+      const text = raw.trim();
+      if (!text) throw new Error("请先粘贴内容");
+      try {
+        return parseJsonImport(extractCodeBlock(text));
+      } catch (_) {
+        return parsePipeImport(text);
+      }
+    }
+
+    function removeCardsByDeck(deckId) {
+      const ids = cards.filter(c => c.deckId === deckId).map(c => c.id);
+      cards = cards.filter(c => c.deckId !== deckId);
+      ids.forEach(id => {
+        knownSet.delete(id);
+        hardSet.delete(id);
+        delete srsMap[id];
+      });
+    }
+
+    function runImport() {
+      let imported = [];
+      try {
+        imported = parseImport($("bulkInput").value);
+      } catch (err) {
+        setStatus(`导入失败：${err.message}`, "error");
+        return;
+      }
+
+      const mode = $("importModeSelect").value;
+      let targetDeckId = selectedDeckId;
+
+      if (mode === "newDeck") {
+        const name = $("newDeckNameInput").value.trim() || `新卡组-${new Date().toLocaleDateString("zh-CN")}`;
+        const deck = createDeck(name);
+        if (!deck) {
+          setStatus("新建卡组失败", "error");
+          return;
+        }
+        targetDeckId = deck.id;
+      }
+
+      if (!targetDeckId) {
+        setStatus("请先创建并选择一个卡组", "error");
+        return;
+      }
+
+      if (mode === "replace") {
+        if (!confirm("将清空当前卡组后再导入，确认继续？")) return;
+        removeCardsByDeck(targetDeckId);
+      }
+
+      const existingKeys = new Set(cards.filter(c => c.deckId === targetDeckId).map(cardTextKey));
+      const batchKeys = new Set();
+      let duplicateCount = 0;
+      const toAdd = [];
+
+      imported.forEach(item => {
+        const card = buildCardForDeck(targetDeckId, item);
+        const key = cardTextKey(card);
+        if (existingKeys.has(key) || batchKeys.has(key)) {
+          duplicateCount++;
+          return;
+        }
+        toAdd.push(card);
+        batchKeys.add(key);
+      });
+
+      cards = [...cards, ...toAdd];
+      toAdd.forEach(c => ensureSrsRecord(c.id));
+      selectedDeckId = targetDeckId;
+      saveData();
+
+      renderTree();
+      renderCurrentDeckPath();
+      rebuildCategoryFilter();
+      rebuildView(true);
+
+      const modeText = mode === "append" ? "追加" : mode === "replace" ? "替换" : "新建卡组导入";
+      setStatus(`导入成功：${modeText}新增 ${toAdd.length} 张，跳过重复 ${duplicateCount} 张。`, "ok");
+    }
+    function currentCard() {
+      return viewCards[currentIndex] || null;
+    }
+
+    function renderEditorHint() {
+      const card = currentCard();
+      $("editCardIdHint").textContent = card
+        ? `当前：${htmlToText(card.qHtml).slice(0, 24)}${htmlToText(card.qHtml).length > 24 ? "..." : ""}`
+        : "当前：未选中卡片";
+    }
+
+    function loadCurrentToEditor() {
+      const card = currentCard();
+      if (!card) {
+        setStatus("当前没有可编辑卡片", "error");
+        return;
+      }
+      $("editQuestion").innerHTML = card.qHtml;
+      $("editAnswer").innerHTML = card.aHtml;
+      $("editCatInput").value = card.cat || "";
+      $("editTagsInput").value = (card.tags || []).join(", ");
+      activeEditorId = "editQuestion";
+      $("editQuestion").focus();
+      setStatus("已载入当前卡片到编辑器", "ok");
+    }
+
+    function createCardFromEditor() {
+      if (!selectedDeckId) {
+        setStatus("请先创建并选择卡组", "error");
+        return;
+      }
+      const qHtml = sanitizeRichHtml($("editQuestion").innerHTML.trim());
+      const aHtml = sanitizeRichHtml($("editAnswer").innerHTML.trim());
+      if (!htmlToText(qHtml) || !htmlToText(aHtml)) {
+        setStatus("新建卡片失败：问题和答案都不能为空", "error");
+        return;
+      }
+
+      const card = {
+        id: uid("c"),
+        deckId: selectedDeckId,
+        qHtml,
+        aHtml,
+        cat: $("editCatInput").value.trim() || "未分类",
+        tags: normalizeTags($("editTagsInput").value),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      cards.push(card);
+      ensureSrsRecord(card.id);
+      saveData();
+      rebuildCategoryFilter();
+      rebuildView(true);
+      setStatus("已新建卡片", "ok");
+    }
+
+    function saveEditorChanges() {
+      const card = currentCard();
+      if (!card) {
+        setStatus("请先选择一张卡片再保存", "error");
+        return;
+      }
+
+      const qHtml = sanitizeRichHtml($("editQuestion").innerHTML.trim());
+      const aHtml = sanitizeRichHtml($("editAnswer").innerHTML.trim());
+      if (!htmlToText(qHtml) || !htmlToText(aHtml)) {
+        setStatus("保存失败：问题和答案都不能为空", "error");
+        return;
+      }
+
+      card.qHtml = qHtml;
+      card.aHtml = aHtml;
+      card.cat = $("editCatInput").value.trim() || "未分类";
+      card.tags = normalizeTags($("editTagsInput").value);
+      card.updatedAt = new Date().toISOString();
+
+      saveData();
+      rebuildCategoryFilter();
+      rebuildView(false);
+      setStatus("卡片已保存", "ok");
+    }
+
+    function runFormatCommand(command) {
+      const editor = $(activeEditorId);
+      if (!editor) return;
+      editor.focus();
+
+      if (command === "highlight") {
+        if (document.queryCommandSupported("hiliteColor")) {
+          document.execCommand("hiliteColor", false, "#fff3a3");
+        } else {
+          document.execCommand("backColor", false, "#fff3a3");
+        }
+        return;
+      }
+
+      if (command === "cloze") {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        if (!editor.contains(range.commonAncestorContainer)) return;
+        const text = sel.toString().trim();
+        if (!text) {
+          setStatus("请先在编辑器中选中要挖空的词", "error");
+          return;
+        }
+
+        const span = document.createElement("span");
+        span.className = "cloze";
+        span.setAttribute("data-answer", text);
+        span.textContent = "_____";
+        range.deleteContents();
+        range.insertNode(span);
+        sel.removeAllRanges();
+        return;
+      }
+
+      document.execCommand(command, false, null);
+    }
+
+    async function copyText(text, successText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(successText, "ok");
+      } catch (_) {
+        setStatus("复制失败，请手动复制", "error");
+      }
+    }
+
+    function spawnRibbons(button) {
+      const burst = document.createElement("span");
+      burst.className = "ribbon-burst";
+      const conf = [
+        { tx: -20, ty: -30, rot: -32, c: "#ffd166" },
+        { tx: 0, ty: -36, rot: 0, c: "#7bdff2" },
+        { tx: 20, ty: -30, rot: 32, c: "#ff7aa2" }
+      ];
+      conf.forEach(v => {
+        const r = document.createElement("span");
+        r.className = "ribbon fly";
+        r.style.setProperty("--tx", `${v.tx}px`);
+        r.style.setProperty("--ty", `${v.ty}px`);
+        r.style.setProperty("--rot", `${v.rot}deg`);
+        r.style.setProperty("--c", v.c);
+        burst.appendChild(r);
+      });
+      button.appendChild(burst);
+      setTimeout(() => burst.remove(), 620);
+    }
+
+    function addButtonFx(e) {
+      const b = e.currentTarget;
+      b.classList.remove("clicked");
+      void b.offsetWidth;
+      b.classList.add("clicked");
+      spawnRibbons(b);
+      setTimeout(() => b.classList.remove("clicked"), 350);
+    }
+
+    function bindEvents() {
+      document.querySelectorAll("button").forEach(btn => btn.addEventListener("click", addButtonFx));
+
+      $("createFolderBtn").addEventListener("click", createFolder);
+      $("createDeckBtn").addEventListener("click", () => createDeck());
+      $("renameDeckBtn").addEventListener("click", renameDeck);
+
+      $("flash").addEventListener("click", flipCard);
+      $("flipBtn").addEventListener("click", flipCard);
+      $("nextBtn").addEventListener("click", () => nextCard(true));
+      $("prevBtn").addEventListener("click", () => prevCard(true));
+      $("knownBtn").addEventListener("click", markKnown);
+      $("hardBtn").addEventListener("click", markHard);
+      $("deleteCurrentBtn").addEventListener("click", deleteCurrentCard);
+      $("resetProgressBtn").addEventListener("click", resetProgress);
+      $("exportBtn").addEventListener("click", exportData);
+      $("exportDeckBtn").addEventListener("click", exportCurrentDeckPackage);
+
+      $("copyPromptBtn").addEventListener("click", () => copyText(aiPromptTemplate, "提示词已复制"));
+      $("copyExampleBtn").addEventListener("click", () => copyText(lineExample, "格式示例已复制"));
+      $("importBtn").addEventListener("click", runImport);
+      $("clearInputBtn").addEventListener("click", () => {
+        $("bulkInput").value = "";
+        setStatus("输入框已清空");
+      });
+
+      $("importModeSelect").addEventListener("change", () => {
+        const isNewDeck = $("importModeSelect").value === "newDeck";
+        $("newDeckNameRow").style.display = isNewDeck ? "block" : "none";
+      });
+      $("importPackageFile").addEventListener("change", async event => {
+        const file = event.target.files && event.target.files[0];
+        await importDeckPackageFromFile(file);
+        event.target.value = "";
+      });
+
+      $("loadCurrentToEditorBtn").addEventListener("click", loadCurrentToEditor);
+      $("newCardFromEditorBtn").addEventListener("click", createCardFromEditor);
+      $("saveEditBtn").addEventListener("click", saveEditorChanges);
+
+      document.querySelectorAll(".fmt-btn").forEach(btn => {
+        btn.addEventListener("click", () => runFormatCommand(btn.dataset.cmd));
+      });
+
+      $("editQuestion").addEventListener("focus", () => { activeEditorId = "editQuestion"; });
+      $("editAnswer").addEventListener("focus", () => { activeEditorId = "editAnswer"; });
+
+      $("orderSelect").addEventListener("change", () => rebuildView(true));
+      $("categoryFilter").addEventListener("change", () => rebuildView(true));
+      $("dueOnlyToggle").addEventListener("change", () => rebuildView(true));
+
+      let searchTimer = null;
+      $("searchInput").addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => rebuildView(true), 120);
+      });
+
+      document.addEventListener("keydown", e => {
+        if (["TEXTAREA", "INPUT", "SELECT"].includes(e.target.tagName)) return;
+        if (e.target.classList && e.target.classList.contains("editor-box")) return;
+
+        if (e.code === "Space") {
+          e.preventDefault();
+          flipCard();
+        }
+        if (e.code === "ArrowRight") nextCard(true);
+        if (e.code === "ArrowLeft") prevCard(true);
+        if (e.key === "1") markKnown();
+        if (e.key === "2") markHard();
+      });
+    }
+
+    function init() {
+      loadData();
+      $("promptTemplate").value = aiPromptTemplate;
+
+      modeButtons();
+      renderTree();
+      renderCurrentDeckPath();
+      rebuildCategoryFilter();
+      bindEvents();
+      rebuildView(true);
+
+      setStatus("已就绪：先建结构 -> 选导入方式 -> 导入/编辑卡片", "ok");
+    }
+
+    init();
+  </script>
+</body>
+</html>
