@@ -738,13 +738,17 @@
             </select>
             <div class="small" id="importTargetHint">目标卡组：未选择</div>
             <div id="newDeckNameRow" style="display:none;">
+              <label class="small" for="newDeckFolderSelect">新卡组放入文件夹</label>
+              <select id="newDeckFolderSelect"></select>
               <input id="newDeckNameInput" type="text" placeholder="新卡组名称（例如：英语-Unit 5）" />
+              <div class="small" id="newDeckTargetHint">新卡组位置：根目录 / （新卡组）</div>
             </div>
           </div>
 
           <textarea id="bulkInput" placeholder="支持两种格式：
 1) ```json 代码块中的 JSON（推荐，支持题型）
 2) 每行一张卡：问题 | 答案 | 分类 | 标签 | 题型 | 选项A;;选项B;;选项C | 关键词1,关键词2"></textarea>
+          <div class="small">说明：JSON 数组里每一项就是一张卡片；整份 JSON 会导入到你选择的同一个卡组里。</div>
           <div class="toolbar">
             <button id="importBtn">导入卡片</button>
             <button id="clearInputBtn" class="secondary">清空输入</button>
@@ -1392,18 +1396,67 @@
 
       renderBranch("root", 0);
       rebuildTargetDeckSelect();
+      rebuildNewDeckFolderSelect();
+      refreshImportTargetHints();
     }
 
     function renderCurrentDeckPath() {
       $("currentDeckPath").textContent = `当前卡组：${getDeckPath(selectedDeckId)}`;
-      const targetId = currentTargetDeckId();
-      $("importTargetHint").textContent = `目标卡组：${getDeckPath(targetId || selectedDeckId)}`;
+      refreshImportTargetHints();
     }
 
     function currentTargetDeckId() {
       const sel = $("targetDeckSelect");
       if (!sel || !sel.value) return selectedDeckId;
       return sel.value;
+    }
+
+    function currentNewDeckFolderId() {
+      const sel = $("newDeckFolderSelect");
+      if (!sel || !sel.value) return selectedFolderId || "root";
+      return sel.value;
+    }
+
+    function rebuildNewDeckFolderSelect() {
+      const sel = $("newDeckFolderSelect");
+      if (!sel) return;
+
+      const old = sel.value || selectedFolderId || "root";
+      sel.innerHTML = "";
+
+      const rootOption = document.createElement("option");
+      rootOption.value = "root";
+      rootOption.textContent = "根目录";
+      sel.appendChild(rootOption);
+
+      const appendFolderOptions = (parentId, depth) => {
+        folderChildren(parentId).forEach(folder => {
+          const op = document.createElement("option");
+          op.value = folder.id;
+          op.textContent = `${"  ".repeat(depth)}${folder.name}`;
+          sel.appendChild(op);
+          appendFolderOptions(folder.id, depth + 1);
+        });
+      };
+      appendFolderOptions("root", 0);
+
+      const valid = [...sel.options].some(op => op.value === old);
+      sel.value = valid ? old : (selectedFolderId || "root");
+    }
+
+    function refreshImportTargetHints() {
+      const importHint = $("importTargetHint");
+      const newDeckHint = $("newDeckTargetHint");
+      const modeSelect = $("importModeSelect");
+      if (!importHint || !newDeckHint || !modeSelect) return;
+
+      const targetId = currentTargetDeckId();
+      importHint.textContent = `目标卡组：${getDeckPath(targetId || selectedDeckId)}`;
+      const folderId = currentNewDeckFolderId();
+      const mode = modeSelect.value;
+      if (mode === "newDeck") {
+        newDeckHint.textContent = `新卡组位置：${getFolderPath(folderId)} / （新卡组）`;
+      }
     }
 
     function rebuildTargetDeckSelect() {
@@ -1420,7 +1473,7 @@
       const fallback = selectedDeckId || (decks[0] ? decks[0].id : "");
       const next = decks.some(d => d.id === old) ? old : fallback;
       if (next) sel.value = next;
-      $("importTargetHint").textContent = `目标卡组：${getDeckPath(next || selectedDeckId)}`;
+      refreshImportTargetHints();
     }
 
     function createFolder() {
@@ -1437,17 +1490,19 @@
       setStatus("已创建文件夹", "ok");
     }
 
-    function createDeck(customName = "") {
+    function createDeck(customName = "", customFolderId = null) {
       const finalName = customName || prompt("新卡组名称：") || "";
       if (!finalName.trim()) return null;
+      const folderId = customFolderId || selectedFolderId || "root";
       const deck = {
         id: uid("d"),
         name: finalName.trim(),
-        folderId: selectedFolderId || "root",
+        folderId,
         createdAt: new Date().toISOString()
       };
       decks.push(deck);
       selectedDeckId = deck.id;
+      selectedFolderId = folderId;
       saveData();
       renderTree();
       renderCurrentDeckPath();
@@ -2328,7 +2383,8 @@
       if (mode === "newDeck") {
         const autoName = imported[0]?.cat ? `${imported[0].cat}-题库` : `新卡组-${new Date().toLocaleDateString("zh-CN")}`;
         const name = $("newDeckNameInput").value.trim() || autoName;
-        const deck = createDeck(name);
+        const folderId = currentNewDeckFolderId();
+        const deck = createDeck(name, folderId);
         if (!deck) {
           setStatus("新建卡组失败", "error");
           return;
@@ -2373,7 +2429,7 @@
       rebuildView(true);
 
       const modeText = mode === "append" ? "追加" : mode === "replace" ? "替换" : "新建卡组导入";
-      setStatus(`导入成功：${modeText}新增 ${toAdd.length} 张，跳过重复 ${duplicateCount} 张。`, "ok");
+      setStatus(`导入成功：${modeText}新增 ${toAdd.length} 张，跳过重复 ${duplicateCount} 张。目标：${getDeckPath(targetDeckId)}（整批 JSON 导入同一卡组）`, "ok");
     }
     function renderEditorHint() {
       const card = currentCard();
@@ -2614,7 +2670,9 @@
       $("importModeSelect").addEventListener("change", () => {
         const isNewDeck = $("importModeSelect").value === "newDeck";
         $("newDeckNameRow").style.display = isNewDeck ? "block" : "none";
+        refreshImportTargetHints();
       });
+      $("newDeckFolderSelect").addEventListener("change", refreshImportTargetHints);
       $("targetDeckSelect").addEventListener("change", () => {
         const id = currentTargetDeckId();
         if (!id) return;
