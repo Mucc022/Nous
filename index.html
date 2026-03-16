@@ -59,7 +59,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 340px minmax(0, 1fr);
+      grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr);
       gap: 12px;
     }
 
@@ -675,7 +675,12 @@
 
     <div class="layout">
       <aside class="left">
-        <section class="panel guide">
+        <section class="panel">
+          <h2 class="title">学习状态</h2>
+          <div id="statusStrip" class="status-strip"></div>
+        </section>
+
+        <section class="panel hidden guide">
           <h2 class="title">第一次使用</h2>
           <ol>
             <li>先在「知识库结构」里新建文件夹与卡组（支持无限嵌套文件夹）。</li>
@@ -696,7 +701,7 @@
           <div class="small">提示：先点文件夹，再点“新建文件夹/卡组”，即可实现无限层级嵌套。</div>
         </section>
 
-        <section class="panel">
+        <section class="panel hidden">
           <h2 class="title">设置</h2>
           <div class="mode-row" id="modeRow"></div>
           <div class="form-grid">
@@ -745,14 +750,6 @@
       </aside>
 
       <main class="main">
-        <section class="panel">
-          <div class="row">
-            <h2 class="title">卡片状态</h2>
-            <span class="small">点击切换状态视图</span>
-          </div>
-          <div id="statusStrip" class="status-strip"></div>
-        </section>
-
         <section class="card-shell" id="flashWrap">
           <div id="flash" class="flash">
             <article class="face front">
@@ -782,20 +779,17 @@
               <button id="revealBtn" class="ghost">查看参考答案</button>
             </div>
             <div id="judgeHint" class="practice-hint">先作答，再提交；然后你自己判断并点击“答对/答错”。</div>
+            <div class="toolbar">
+              <button id="prevBtn" class="secondary">上一张</button>
+              <button id="flipBtn" class="secondary">复习看答案</button>
+              <button id="nextBtn">下一张</button>
+              <button id="knownBtn" class="good">答对</button>
+              <button id="hardBtn" class="warn">答错（进错题本）</button>
+              <button id="deleteCurrentBtn" class="ghost">删除当前</button>
+            </div>
+            <div id="answerFeedback" class="practice-hint hidden"></div>
+            <div id="practiceProgress" class="practice-hint">本轮练习：0 / 0，错题本：0</div>
           </div>
-        </section>
-
-        <section class="panel">
-          <div class="toolbar">
-            <button id="prevBtn" class="secondary">上一张</button>
-            <button id="flipBtn" class="secondary">复习看答案</button>
-            <button id="nextBtn">下一张</button>
-            <button id="knownBtn" class="good">答对</button>
-            <button id="hardBtn" class="warn">答错（进错题本）</button>
-            <button id="deleteCurrentBtn" class="ghost">删除当前</button>
-          </div>
-          <div id="answerFeedback" class="practice-hint hidden"></div>
-          <div id="practiceProgress" class="practice-hint">本轮练习：0 / 0，错题本：0</div>
         </section>
 
         <section class="work-grid">
@@ -810,6 +804,8 @@
             <textarea id="promptTemplate" readonly></textarea>
 
             <div class="form-grid" style="margin-top:8px;">
+              <label class="small" for="targetDeckSelect">导入目标卡组（明确指定）</label>
+              <select id="targetDeckSelect"></select>
               <label class="small" for="importModeSelect">导入方式</label>
               <select id="importModeSelect">
                 <option value="append">追加到当前卡组</option>
@@ -1397,11 +1393,36 @@
       });
 
       renderBranch("root", 0);
+      rebuildTargetDeckSelect();
     }
 
     function renderCurrentDeckPath() {
       $("currentDeckPath").textContent = `当前卡组：${getDeckPath(selectedDeckId)}`;
-      $("importTargetHint").textContent = `目标卡组：${getDeckPath(selectedDeckId)}`;
+      const targetId = currentTargetDeckId();
+      $("importTargetHint").textContent = `目标卡组：${getDeckPath(targetId || selectedDeckId)}`;
+    }
+
+    function currentTargetDeckId() {
+      const sel = $("targetDeckSelect");
+      if (!sel || !sel.value) return selectedDeckId;
+      return sel.value;
+    }
+
+    function rebuildTargetDeckSelect() {
+      const sel = $("targetDeckSelect");
+      if (!sel) return;
+      const old = sel.value || selectedDeckId || "";
+      sel.innerHTML = "";
+      decks.forEach(deck => {
+        const op = document.createElement("option");
+        op.value = deck.id;
+        op.textContent = getDeckPath(deck.id);
+        sel.appendChild(op);
+      });
+      const fallback = selectedDeckId || (decks[0] ? decks[0].id : "");
+      const next = decks.some(d => d.id === old) ? old : fallback;
+      if (next) sel.value = next;
+      $("importTargetHint").textContent = `目标卡组：${getDeckPath(next || selectedDeckId)}`;
     }
 
     function createFolder() {
@@ -2163,7 +2184,8 @@
     }
 
     async function importDeckPackageFromFile(file) {
-      if (!selectedDeckId) {
+      const explicitTarget = currentTargetDeckId();
+      if (!explicitTarget) {
         setStatus("请先选择一个卡组再导入分享包", "error");
         return;
       }
@@ -2182,7 +2204,7 @@
       }
 
       const mode = $("packageImportModeSelect").value || "append";
-      const targetDeckId = selectedDeckId;
+      const targetDeckId = explicitTarget;
 
       if (mode === "replace") {
         if (!confirm("将覆盖当前卡组，确认继续？")) return;
@@ -2207,6 +2229,7 @@
 
       cards = [...cards, ...toAdd];
       toAdd.forEach(c => ensureSrsRecord(c.id));
+      selectedDeckId = targetDeckId;
       saveData();
       rebuildCategoryFilter();
       rebuildView(true);
@@ -2302,7 +2325,7 @@
       }
 
       const mode = $("importModeSelect").value;
-      let targetDeckId = selectedDeckId;
+      let targetDeckId = currentTargetDeckId();
 
       if (mode === "newDeck") {
         const autoName = imported[0]?.cat ? `${imported[0].cat}-题库` : `新卡组-${new Date().toLocaleDateString("zh-CN")}`;
@@ -2593,6 +2616,14 @@
       $("importModeSelect").addEventListener("change", () => {
         const isNewDeck = $("importModeSelect").value === "newDeck";
         $("newDeckNameRow").style.display = isNewDeck ? "block" : "none";
+      });
+      $("targetDeckSelect").addEventListener("change", () => {
+        const id = currentTargetDeckId();
+        if (!id) return;
+        selectedDeckId = id;
+        renderCurrentDeckPath();
+        rebuildCategoryFilter();
+        rebuildView(true);
       });
       $("importPackageFile").addEventListener("change", async event => {
         const file = event.target.files && event.target.files[0];
