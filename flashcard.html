@@ -334,7 +334,7 @@
 
     .flash {
       position: relative;
-      min-height: 520px;
+      min-height: 380px;
       transform-style: preserve-3d;
       transition: transform .45s ease;
       cursor: pointer;
@@ -368,17 +368,38 @@
       background: radial-gradient(circle at 0% 100%, rgba(198,226,255,.36), transparent 26%), #fafdff;
     }
 
-    .q {
-      font-size: 34px;
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .progress-chip {
+      flex-shrink: 0;
+      border-radius: 999px;
+      border: 1px solid #d8c8b2;
+      background: #fff6ea;
+      color: #6f563f;
+      font-size: 12px;
       font-weight: 700;
-      line-height: 1.45;
+      padding: 5px 10px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .q {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.55;
       white-space: normal;
       word-break: break-word;
     }
 
     .a {
-      font-size: 24px;
-      line-height: 1.68;
+      font-size: 20px;
+      line-height: 1.72;
       white-space: normal;
       word-break: break-word;
     }
@@ -401,7 +422,7 @@
       background: #f3efe9;
       color: #6b5a4a;
       padding: 3px 9px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       margin-bottom: 8px;
     }
@@ -424,14 +445,12 @@
     }
 
     .answer-work {
-      margin-top: 10px;
-      border: 1px solid #e8dccb;
-      border-radius: 14px;
-      background: rgba(255, 253, 249, 0.92);
+      margin-top: 8px;
+      border: 1px solid #ddd2c0;
+      border-radius: 16px;
+      background: #fffdf9;
       padding: 10px;
-      max-width: 920px;
-      margin-left: auto;
-      margin-right: auto;
+      max-width: 100%;
     }
 
     .answer-input {
@@ -484,10 +503,17 @@
     .dropzone {
       border: 1px dashed #ccb89f;
       border-radius: 12px;
-      padding: 10px 12px;
+      padding: 12px;
+      min-height: 170px;
+      aspect-ratio: 1 / 1;
+      max-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
       background: #fff9f1;
       color: #6a5744;
-      font-size: 13px;
+      font-size: 14px;
       transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
     }
 
@@ -499,9 +525,9 @@
 
     .feedback-ok {
       border-style: solid;
-      border-color: #b4d9c4;
-      background: #eef9f1;
-      color: #1f6e3e;
+      border-color: #b8cff8;
+      background: #edf3ff;
+      color: #264f97;
       font-weight: 700;
     }
 
@@ -660,9 +686,10 @@
     @media (max-width: 1060px) {
       .layout { grid-template-columns: 1fr; }
       .work-grid { grid-template-columns: 1fr; }
-      .flash { min-height: 430px; }
-      .q { font-size: 27px; }
-      .a { font-size: 20px; }
+      .flash { min-height: 320px; }
+      .q { font-size: 19px; }
+      .a { font-size: 17px; }
+      .dropzone { min-height: 150px; max-height: none; }
     }
   </style>
 </head>
@@ -825,7 +852,10 @@
           <div id="flash" class="flash">
             <article class="face front">
               <div>
-                <div id="frontTags"></div>
+                <div class="card-head">
+                  <div id="frontTags"></div>
+                  <div id="cardProgress" class="progress-chip">第 0/0 题</div>
+                </div>
                 <div id="question" class="q">请先选择或创建一个卡组，然后导入/新建卡片</div>
               </div>
               <div class="small">第一轮先作答，再看答案</div>
@@ -859,7 +889,7 @@
               <button id="deleteCurrentBtn" class="ghost">删除当前</button>
             </div>
             <div id="answerFeedback" class="practice-hint hidden"></div>
-            <div id="practiceProgress" class="practice-hint">本轮练习：0 / 0，错题本：0</div>
+            <div id="practiceProgress" class="practice-hint hidden">本轮练习：0 / 0，错题本：0</div>
           </div>
         </section>
 
@@ -989,6 +1019,7 @@
     let selectedListIds = new Set();
     let activeEditorId = "editQuestion";
     let answerSubmitted = false;
+    let autoJudgeTimer = null;
 
     function uid(prefix = "id") {
       return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1012,6 +1043,40 @@
       const div = document.createElement("div");
       div.innerHTML = html || "";
       return (div.textContent || "").trim();
+    }
+
+    function normalizeAnswerText(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/[\s\r\n\t]/g, "")
+        .replace(/[，,。.!！?？;；:：、"'“”‘’（）()【】\[\]《》<>]/g, "");
+    }
+
+    function isAutoJudgeType(type) {
+      const t = normalizeCardType(type);
+      return t === "choice" || t === "cloze" || t === "passage";
+    }
+
+    function isAnswerCorrect(card, answerText) {
+      const type = normalizeCardType(card.type);
+      const user = normalizeAnswerText(answerText);
+      const standardText = htmlToText(card.aHtml);
+      const standard = normalizeAnswerText(standardText);
+      if (!user || !standard) return false;
+
+      if (type === "choice") {
+        return user === standard;
+      }
+
+      if (user === standard) return true;
+      const pieces = standardText
+        .split(/[，,、;；/|]/)
+        .map(normalizeAnswerText)
+        .filter(Boolean);
+      if (pieces.length >= 2) {
+        return pieces.every(p => user.includes(p));
+      }
+      return false;
     }
 
     function normalizeTags(raw) {
@@ -1699,7 +1764,9 @@
       const choiceBox = $("choiceBox");
       const answerInput = $("answerInput");
       $("questionTypeHint").textContent = `题型：${cardTypeLabel(type)}`;
-      $("judgeHint").textContent = "先作答，再提交；然后你自己判断并点击“答对/答错”。";
+      $("judgeHint").textContent = isAutoJudgeType(type)
+        ? "提交后自动判定（蓝=正确，红=错误），错题会自动加入错题本。"
+        : "先作答，再提交；然后你自己判断并点击“答对/答错”。";
       choiceBox.innerHTML = "";
 
       if (type === "choice") {
@@ -1734,22 +1801,27 @@
       $("judgeHint").textContent = message;
     }
 
-    function showAnswerFeedback(ok) {
+    function showAnswerFeedback(ok, customText = "") {
       const box = $("answerFeedback");
       box.classList.remove("hidden", "feedback-ok", "feedback-bad");
       if (ok) {
         box.classList.add("feedback-ok");
-        box.textContent = "回答正确，已进入下一题。";
+        box.textContent = customText || "回答正确，已进入下一题。";
       } else {
         box.classList.add("feedback-bad");
-        box.textContent = "回答错误，已加入错题本并排到后面继续练。";
+        box.textContent = customText || "回答错误，已加入错题本并排到后面继续练。";
       }
     }
 
     function renderCard() {
       const flash = $("flash");
+      if (autoJudgeTimer) {
+        clearTimeout(autoJudgeTimer);
+        autoJudgeTimer = null;
+      }
       flash.classList.remove("flipped");
       $("answerFeedback").classList.add("hidden");
+      $("cardProgress").textContent = "第 0/0 题";
 
       if (!selectedDeckId) {
         $("question").textContent = "请先创建并选择卡组";
@@ -1775,6 +1847,7 @@
         $("answer").textContent = "错题本已清空，可继续下一轮";
         $("frontTags").innerHTML = "";
         $("backTags").innerHTML = "";
+        $("cardProgress").textContent = "第 0/0 题";
         return;
       }
       $("question").innerHTML = renderQuestionBody(card);
@@ -1802,7 +1875,12 @@
       $("knownCount").textContent = String(plannedCount);
       $("hardCount").textContent = String(unplannedCount);
       $("libraryCount").textContent = `${deckCards.length} 张`;
-      $("practiceProgress").textContent = `本轮练习：${practiceQueueIds.length ? currentIndex + 1 : 0} / ${practiceQueueIds.length}，错题本：${wrongBookSet.size}`;
+      const progress = `第 ${practiceQueueIds.length ? currentIndex + 1 : 0}/${practiceQueueIds.length} 题`;
+      $("cardProgress").textContent = `${progress} · 错题 ${wrongBookSet.size}`;
+      const practiceProgress = $("practiceProgress");
+      if (practiceProgress) {
+        practiceProgress.textContent = `本轮练习：${practiceQueueIds.length ? currentIndex + 1 : 0} / ${practiceQueueIds.length}，错题本：${wrongBookSet.size}`;
+      }
     }
 
     function sameDay(tsA, tsB) {
@@ -1984,51 +2062,50 @@
       }
     }
 
-    function markKnown() {
+    function applyJudgeResult(isCorrect, options = {}) {
+      const {
+        requireSubmitted = true,
+        withAnimation = true,
+        silentFeedback = false
+      } = options;
       const card = currentCard();
       if (!card) return;
-      if (!answerSubmitted) {
+      if (requireSubmitted && !answerSubmitted) {
         setStatus("请先提交答案或查看参考答案，再判断对错", "error");
         return;
       }
+
       const id = card.id;
-      knownSet.add(id);
-      hardSet.delete(id);
-      wrongBookSet.delete(id);
-      markReviewedSrs(id, true);
+      if (isCorrect) {
+        knownSet.add(id);
+        hardSet.delete(id);
+        wrongBookSet.delete(id);
+        markReviewedSrs(id, true);
+      } else {
+        hardSet.add(id);
+        knownSet.delete(id);
+        wrongBookSet.add(id);
+        pendingWrongIds.push(id);
+        markReviewedSrs(id, false);
+      }
+
       saveData();
       advancePracticeAfterAnswer();
-      animateSwitch("next");
+      if (withAnimation) animateSwitch("next");
       renderCard();
-      showAnswerFeedback(true);
+      if (!silentFeedback) showAnswerFeedback(isCorrect);
       renderStats();
       renderStatusStrip();
       renderEditorHint();
       renderSrsPanel();
     }
 
+    function markKnown() {
+      applyJudgeResult(true, { requireSubmitted: true, withAnimation: true, silentFeedback: false });
+    }
+
     function markHard() {
-      const card = currentCard();
-      if (!card) return;
-      if (!answerSubmitted) {
-        setStatus("请先提交答案或查看参考答案，再判断对错", "error");
-        return;
-      }
-      const id = card.id;
-      hardSet.add(id);
-      knownSet.delete(id);
-      wrongBookSet.add(id);
-      pendingWrongIds.push(id);
-      markReviewedSrs(id, false);
-      saveData();
-      advancePracticeAfterAnswer();
-      animateSwitch("next");
-      renderCard();
-      showAnswerFeedback(false);
-      renderStats();
-      renderStatusStrip();
-      renderEditorHint();
-      renderSrsPanel();
+      applyJudgeResult(false, { requireSubmitted: true, withAnimation: true, silentFeedback: false });
     }
 
     function resetProgress() {
@@ -2585,7 +2662,29 @@
           return;
         }
       }
-      revealCurrentAnswer(`你的答案：${answerText}。已显示参考答案，请点击“答对/答错”。`);
+
+      if (!isAutoJudgeType(type)) {
+        revealCurrentAnswer(`你的答案：${answerText}。已显示参考答案，请点击“答对/答错”。`);
+        return;
+      }
+
+      const correct = isAnswerCorrect(card, answerText);
+      revealCurrentAnswer(
+        correct
+          ? `自动判定：正确。你的答案：${answerText}`
+          : `自动判定：错误。你的答案：${answerText}；正确答案：${htmlToText(card.aHtml)}`
+      );
+      setJudgeButtonsEnabled(false);
+      showAnswerFeedback(
+        correct,
+        correct ? "回答正确，0.8 秒后进入下一题。" : "回答错误，已加入错题本，0.8 秒后进入下一题。"
+      );
+
+      if (autoJudgeTimer) clearTimeout(autoJudgeTimer);
+      autoJudgeTimer = setTimeout(() => {
+        applyJudgeResult(correct, { requireSubmitted: false, withAnimation: true, silentFeedback: true });
+        autoJudgeTimer = null;
+      }, 800);
     }
 
     function showHint() {
