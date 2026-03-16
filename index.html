@@ -398,10 +398,10 @@
       display: inline-flex;
       align-items: center;
       border-radius: 999px;
-      background: #e8f0ff;
-      color: #24486d;
-      padding: 4px 10px;
-      font-size: 12px;
+      background: #f3efe9;
+      color: #6b5a4a;
+      padding: 3px 9px;
+      font-size: 11px;
       font-weight: 700;
       margin-bottom: 8px;
     }
@@ -427,13 +427,16 @@
       margin-top: 10px;
       border: 1px solid #e8dccb;
       border-radius: 14px;
-      background: #fffdf9;
+      background: rgba(255, 253, 249, 0.92);
       padding: 10px;
+      max-width: 920px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .answer-input {
       width: 100%;
-      min-height: 100px;
+      min-height: 82px;
       border: 1px solid #d8c8b5;
       border-radius: 12px;
       padding: 10px;
@@ -464,6 +467,22 @@
 
     .hidden {
       display: none;
+    }
+
+    .feedback-ok {
+      border-style: solid;
+      border-color: #b4d9c4;
+      background: #eef9f1;
+      color: #1f6e3e;
+      font-weight: 700;
+    }
+
+    .feedback-bad {
+      border-style: solid;
+      border-color: #ebc2bc;
+      background: #fff1ee;
+      color: #94382e;
+      font-weight: 700;
     }
 
     .cloze {
@@ -687,20 +706,19 @@
               <div class="small">复习阶段可查看参考答案</div>
             </article>
           </div>
-        </section>
-
-        <section class="panel answer-work">
-          <div class="row">
-            <div id="questionTypeHint" class="muted">题型：-</div>
-            <button id="hintBtn" class="ghost">提示</button>
+          <div class="answer-work">
+            <div class="row">
+              <div id="questionTypeHint" class="muted">题型：-</div>
+              <button id="hintBtn" class="ghost">提示</button>
+            </div>
+            <div id="choiceBox" class="choice-box"></div>
+            <textarea id="answerInput" class="answer-input" placeholder="在这里输入你的答案（选择题请先选择选项）"></textarea>
+            <div class="toolbar">
+              <button id="submitAnswerBtn">提交答案</button>
+              <button id="revealBtn" class="ghost">查看参考答案</button>
+            </div>
+            <div id="judgeHint" class="practice-hint">先作答，再提交；然后你自己判断并点击“答对/答错”。</div>
           </div>
-          <div id="choiceBox" class="choice-box"></div>
-          <textarea id="answerInput" class="answer-input" placeholder="在这里输入你的答案（选择题请先选择选项）"></textarea>
-          <div class="toolbar">
-            <button id="submitAnswerBtn">提交答案</button>
-            <button id="revealBtn" class="ghost">查看参考答案</button>
-          </div>
-          <div id="judgeHint" class="practice-hint">先作答，再提交；然后你自己判断并点击“答对/答错”。</div>
         </section>
 
         <section class="panel">
@@ -712,6 +730,7 @@
             <button id="hardBtn" class="warn">答错（进错题本）</button>
             <button id="deleteCurrentBtn" class="ghost">删除当前</button>
           </div>
+          <div id="answerFeedback" class="practice-hint hidden"></div>
           <div id="practiceProgress" class="practice-hint">本轮练习：0 / 0，错题本：0</div>
         </section>
 
@@ -1561,9 +1580,22 @@
       $("judgeHint").textContent = message;
     }
 
+    function showAnswerFeedback(ok) {
+      const box = $("answerFeedback");
+      box.classList.remove("hidden", "feedback-ok", "feedback-bad");
+      if (ok) {
+        box.classList.add("feedback-ok");
+        box.textContent = "回答正确，已进入下一题。";
+      } else {
+        box.classList.add("feedback-bad");
+        box.textContent = "回答错误，已加入错题本并排到后面继续练。";
+      }
+    }
+
     function renderCard() {
       const flash = $("flash");
       flash.classList.remove("flipped");
+      $("answerFeedback").classList.add("hidden");
 
       if (!selectedDeckId) {
         $("question").textContent = "请先创建并选择卡组";
@@ -1786,6 +1818,7 @@
       advancePracticeAfterAnswer();
       animateSwitch("next");
       renderCard();
+      showAnswerFeedback(true);
       renderStats();
       renderStatusStrip();
       renderEditorHint();
@@ -1809,6 +1842,7 @@
       advancePracticeAfterAnswer();
       animateSwitch("next");
       renderCard();
+      showAnswerFeedback(false);
       renderStats();
       renderStatusStrip();
       renderEditorHint();
