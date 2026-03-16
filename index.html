@@ -1019,7 +1019,7 @@
     let selectedListIds = new Set();
     let activeEditorId = "editQuestion";
     let answerSubmitted = false;
-    let autoJudgeTimer = null;
+    let currentJudged = false;
 
     function uid(prefix = "id") {
       return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1790,6 +1790,7 @@
       }
 
       answerSubmitted = false;
+      currentJudged = false;
       setJudgeButtonsEnabled(false);
     }
 
@@ -1815,10 +1816,6 @@
 
     function renderCard() {
       const flash = $("flash");
-      if (autoJudgeTimer) {
-        clearTimeout(autoJudgeTimer);
-        autoJudgeTimer = null;
-      }
       flash.classList.remove("flipped");
       $("answerFeedback").classList.add("hidden");
       $("cardProgress").textContent = "第 0/0 题";
@@ -2021,7 +2018,11 @@
         resetPracticeQueue();
       }
       if (!practiceQueueIds.length) return;
-      currentIndex = Math.min(currentIndex + 1, practiceQueueIds.length - 1);
+      if (currentJudged) {
+        advancePracticeAfterAnswer();
+      } else {
+        currentIndex = Math.min(currentIndex + 1, practiceQueueIds.length - 1);
+      }
       if (playAnimation) animateSwitch("next");
       renderCard();
       renderStats();
@@ -2065,7 +2066,6 @@
     function applyJudgeResult(isCorrect, options = {}) {
       const {
         requireSubmitted = true,
-        withAnimation = true,
         silentFeedback = false
       } = options;
       const card = currentCard();
@@ -2074,38 +2074,46 @@
         setStatus("请先提交答案或查看参考答案，再判断对错", "error");
         return;
       }
+      if (currentJudged) {
+        setStatus("当前题已判定，请点击“下一张”继续", "error");
+        return;
+      }
 
       const id = card.id;
       if (isCorrect) {
         knownSet.add(id);
         hardSet.delete(id);
         wrongBookSet.delete(id);
+        pendingWrongIds = pendingWrongIds.filter(x => x !== id);
         markReviewedSrs(id, true);
       } else {
         hardSet.add(id);
         knownSet.delete(id);
         wrongBookSet.add(id);
-        pendingWrongIds.push(id);
+        if (!pendingWrongIds.includes(id)) pendingWrongIds.push(id);
         markReviewedSrs(id, false);
       }
 
+      currentJudged = true;
+      setJudgeButtonsEnabled(false);
       saveData();
-      advancePracticeAfterAnswer();
-      if (withAnimation) animateSwitch("next");
-      renderCard();
+      $("judgeHint").textContent = isCorrect
+        ? "已判定：答对。点击“下一张”继续。"
+        : "已判定：答错（已进错题本）。点击“下一张”继续。";
       if (!silentFeedback) showAnswerFeedback(isCorrect);
       renderStats();
       renderStatusStrip();
+      renderCardList();
       renderEditorHint();
       renderSrsPanel();
     }
 
     function markKnown() {
-      applyJudgeResult(true, { requireSubmitted: true, withAnimation: true, silentFeedback: false });
+      applyJudgeResult(true, { requireSubmitted: true, silentFeedback: false });
     }
 
     function markHard() {
-      applyJudgeResult(false, { requireSubmitted: true, withAnimation: true, silentFeedback: false });
+      applyJudgeResult(false, { requireSubmitted: true, silentFeedback: false });
     }
 
     function resetProgress() {
@@ -2646,6 +2654,10 @@
     function submitCurrentAnswer() {
       const card = currentCard();
       if (!card) return;
+      if (currentJudged) {
+        setStatus("当前题已判定，请点击“下一张”继续", "error");
+        return;
+      }
       const type = normalizeCardType(card.type);
       let answerText = "";
       if (type === "choice") {
@@ -2674,17 +2686,14 @@
           ? `自动判定：正确。你的答案：${answerText}`
           : `自动判定：错误。你的答案：${answerText}；正确答案：${htmlToText(card.aHtml)}`
       );
-      setJudgeButtonsEnabled(false);
+      $("judgeHint").textContent = correct
+        ? "自动判定正确。点击“下一张”继续。"
+        : "自动判定错误（已进错题本）。点击“下一张”继续。";
       showAnswerFeedback(
         correct,
-        correct ? "回答正确，0.8 秒后进入下一题。" : "回答错误，已加入错题本，0.8 秒后进入下一题。"
+        correct ? "回答正确，已记录。请手动点击“下一张”。" : "回答错误，已加入错题本。请手动点击“下一张”。"
       );
-
-      if (autoJudgeTimer) clearTimeout(autoJudgeTimer);
-      autoJudgeTimer = setTimeout(() => {
-        applyJudgeResult(correct, { requireSubmitted: false, withAnimation: true, silentFeedback: true });
-        autoJudgeTimer = null;
-      }, 800);
+      applyJudgeResult(correct, { requireSubmitted: false, silentFeedback: true });
     }
 
     function showHint() {
