@@ -581,6 +581,42 @@
       cursor: pointer;
     }
 
+    .item.active {
+      border-color: #c89a67;
+      background: #fff6eb;
+    }
+
+    .item-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .item-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .item-x {
+      border: 1px solid #d6c4b1;
+      border-radius: 8px;
+      background: #fff;
+      color: #7a3a2f;
+      padding: 2px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .mini-tools {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      align-items: center;
+    }
+
     .item strong {
       display: block;
       margin-bottom: 6px;
@@ -858,8 +894,16 @@
 
         <section class="panel">
           <div class="row">
-            <h2 class="title">当前卡组预览（点击跳转）</h2>
+            <h2 class="title">卡组大纲（题号/跳转/删除）</h2>
             <span class="small" id="libraryCount">0 张</span>
+          </div>
+          <div class="mini-tools">
+            <input id="jumpIndexInput" type="text" placeholder="输入题号，例如 12" style="max-width:180px;" />
+            <button id="jumpIndexBtn" class="ghost">跳转到题号</button>
+            <button id="selectAllListBtn" class="ghost">全选</button>
+            <button id="clearSelectListBtn" class="ghost">清空勾选</button>
+            <button id="deleteSelectedBtn" class="warn">删除勾选项</button>
+            <span id="selectedCountText" class="small">已勾选 0 题</span>
           </div>
           <div id="cardList" class="list"></div>
         </section>
@@ -944,6 +988,7 @@
     let viewCards = [];
     let practiceQueueIds = [];
     let pendingWrongIds = [];
+    let selectedListIds = new Set();
     let activeEditorId = "editQuestion";
     let answerSubmitted = false;
 
@@ -1243,6 +1288,7 @@
       knownSet = new Set([...knownSet].filter(id => cardIds.has(id)));
       hardSet = new Set([...hardSet].filter(id => cardIds.has(id)));
       wrongBookSet = new Set([...wrongBookSet].filter(id => cardIds.has(id)));
+      selectedListIds = new Set([...selectedListIds].filter(id => cardIds.has(id)));
 
       const cleanedSrs = {};
       cards.forEach(c => {
@@ -1736,6 +1782,7 @@
       const box = $("cardList");
       box.innerHTML = "";
       const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      $("selectedCountText").textContent = `已勾选 ${[...selectedListIds].filter(id => deckCards.some(c => c.id === id)).length} 题`;
 
       if (!deckCards.length) {
         const div = document.createElement("div");
@@ -1745,16 +1792,43 @@
         return;
       }
 
+      const cur = currentCard();
+      const curId = cur ? cur.id : "";
+
       deckCards.forEach((card, index) => {
         const item = document.createElement("div");
-        item.className = "item";
+        item.className = "item" + (card.id === curId ? " active" : "");
         const dueLabel = isCardDue(card.id) ? "到期" : `Lv${srsMap[card.id]?.level ?? 0}`;
+        const checked = selectedListIds.has(card.id) ? "checked" : "";
         item.innerHTML = `
-          <strong>${index + 1}. ${escapeHtml(htmlToText(card.qHtml).slice(0, 88))}</strong>
+          <div class="item-head">
+            <input type="checkbox" class="list-check" data-id="${card.id}" ${checked} />
+            <strong>${index + 1}. ${escapeHtml(htmlToText(card.qHtml).slice(0, 88))}</strong>
+            <div class="item-actions">
+              <button class="item-x" data-del-id="${card.id}" type="button">删除</button>
+            </div>
+          </div>
           <div class="small">${escapeHtml(card.cat)}${card.tags.length ? " · " + escapeHtml(card.tags.join(", ")) : ""} · ${cardTypeLabel(card.type)} · ${dueLabel}</div>
         `;
         item.onclick = () => jumpToCard(card.id);
         box.appendChild(item);
+      });
+
+      box.querySelectorAll(".list-check").forEach(el => {
+        el.addEventListener("click", e => e.stopPropagation());
+        el.addEventListener("change", e => {
+          const id = e.target.dataset.id;
+          if (e.target.checked) selectedListIds.add(id);
+          else selectedListIds.delete(id);
+          $("selectedCountText").textContent = `已勾选 ${[...selectedListIds].filter(id => deckCards.some(c => c.id === id)).length} 题`;
+        });
+      });
+
+      box.querySelectorAll(".item-x").forEach(el => {
+        el.addEventListener("click", e => {
+          e.stopPropagation();
+          deleteCardById(el.dataset.delId, true);
+        });
       });
     }
 
@@ -1906,20 +1980,77 @@
     function deleteCurrentCard() {
       const card = currentCard();
       if (!card) return;
-      if (!confirm(`确认删除这张卡片？\n\n${htmlToText(card.qHtml).slice(0, 100)}`)) return;
+      deleteCardById(card.id, false);
+    }
 
-      cards = cards.filter(c => c.id !== card.id);
-      knownSet.delete(card.id);
-      hardSet.delete(card.id);
-      wrongBookSet.delete(card.id);
-      practiceQueueIds = practiceQueueIds.filter(id => id !== card.id);
-      pendingWrongIds = pendingWrongIds.filter(id => id !== card.id);
+    function deleteCardById(cardId, silentPrompt = false) {
+      const card = getCardById(cardId);
+      if (!card) return;
+      if (!silentPrompt && !confirm(`确认删除这张卡片？\n\n${htmlToText(card.qHtml).slice(0, 100)}`)) return;
+
+      cards = cards.filter(c => c.id !== cardId);
+      knownSet.delete(cardId);
+      hardSet.delete(cardId);
+      wrongBookSet.delete(cardId);
+      selectedListIds.delete(cardId);
+      practiceQueueIds = practiceQueueIds.filter(id => id !== cardId);
+      pendingWrongIds = pendingWrongIds.filter(id => id !== cardId);
       if (currentIndex >= practiceQueueIds.length) currentIndex = Math.max(0, practiceQueueIds.length - 1);
-      delete srsMap[card.id];
+      delete srsMap[cardId];
       saveData();
       rebuildCategoryFilter();
       rebuildView(false);
-      setStatus("已删除当前卡片", "ok");
+      setStatus("已删除卡片", "ok");
+    }
+
+    function deleteSelectedCards() {
+      const ids = [...selectedListIds].filter(id => {
+        const c = getCardById(id);
+        return c && c.deckId === selectedDeckId;
+      });
+      if (!ids.length) {
+        setStatus("请先在大纲里勾选要删除的卡片", "error");
+        return;
+      }
+      if (!confirm(`确认批量删除 ${ids.length} 张卡片？`)) return;
+
+      const idSet = new Set(ids);
+      cards = cards.filter(c => !idSet.has(c.id));
+      ids.forEach(id => {
+        knownSet.delete(id);
+        hardSet.delete(id);
+        wrongBookSet.delete(id);
+        selectedListIds.delete(id);
+        delete srsMap[id];
+      });
+      practiceQueueIds = practiceQueueIds.filter(id => !idSet.has(id));
+      pendingWrongIds = pendingWrongIds.filter(id => !idSet.has(id));
+      if (currentIndex >= practiceQueueIds.length) currentIndex = Math.max(0, practiceQueueIds.length - 1);
+      saveData();
+      rebuildCategoryFilter();
+      rebuildView(true);
+      setStatus(`已批量删除 ${ids.length} 张卡片`, "ok");
+    }
+
+    function selectAllCardsInDeck() {
+      cards.filter(c => c.deckId === selectedDeckId).forEach(c => selectedListIds.add(c.id));
+      renderCardList();
+    }
+
+    function clearSelectedCards() {
+      selectedListIds = new Set();
+      renderCardList();
+    }
+
+    function jumpByIndex() {
+      const text = $("jumpIndexInput").value.trim();
+      const idx = Number(text);
+      const deckCards = cards.filter(c => c.deckId === selectedDeckId);
+      if (!Number.isInteger(idx) || idx < 1 || idx > deckCards.length) {
+        setStatus(`题号无效，请输入 1~${deckCards.length}`, "error");
+        return;
+      }
+      jumpToCard(deckCards[idx - 1].id);
     }
 
     function exportData() {
@@ -2154,6 +2285,7 @@
         knownSet.delete(id);
         hardSet.delete(id);
         wrongBookSet.delete(id);
+        selectedListIds.delete(id);
         delete srsMap[id];
       });
       practiceQueueIds = practiceQueueIds.filter(id => !ids.includes(id));
@@ -2436,6 +2568,10 @@
       $("hintBtn").addEventListener("click", showHint);
       $("revealBtn").addEventListener("click", () => revealCurrentAnswer("已显示参考答案，请自行判断对错。"));
       $("deleteCurrentBtn").addEventListener("click", deleteCurrentCard);
+      $("deleteSelectedBtn").addEventListener("click", deleteSelectedCards);
+      $("selectAllListBtn").addEventListener("click", selectAllCardsInDeck);
+      $("clearSelectListBtn").addEventListener("click", clearSelectedCards);
+      $("jumpIndexBtn").addEventListener("click", jumpByIndex);
       $("resetProgressBtn").addEventListener("click", resetProgress);
       $("exportBtn").addEventListener("click", exportData);
       $("exportDeckBtn").addEventListener("click", exportCurrentDeckPackage);
@@ -2508,6 +2644,9 @@
       $("orderSelect").addEventListener("change", () => rebuildView(true));
       $("categoryFilter").addEventListener("change", () => rebuildView(true));
       $("dueOnlyToggle").addEventListener("change", () => rebuildView(true));
+      $("jumpIndexInput").addEventListener("keydown", e => {
+        if (e.key === "Enter") jumpByIndex();
+      });
 
       let searchTimer = null;
       $("searchInput").addEventListener("input", () => {
