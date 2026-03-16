@@ -919,7 +919,6 @@
             <div class="toolbar">
               <button id="prevBtn" class="secondary">上一张</button>
               <button id="flipBtn" class="secondary">复习看答案</button>
-              <button id="nextBtn">下一张</button>
               <button id="knownBtn" class="good">答对</button>
               <button id="hardBtn" class="warn">答错（进错题本）</button>
               <button id="deleteCurrentBtn" class="ghost">删除当前</button>
@@ -1795,6 +1794,18 @@
       $("hardBtn").disabled = !enabled;
     }
 
+    function updatePrimaryActionButton() {
+      const btn = $("submitAnswerBtn");
+      if (!btn) return;
+      const hasCard = Boolean(currentCard());
+      btn.disabled = !hasCard;
+      if (!hasCard) {
+        btn.textContent = "提交答案";
+        return;
+      }
+      btn.textContent = currentJudged ? "下一张" : "提交答案";
+    }
+
     function renderAnswerPanel(card) {
       const type = normalizeCardType(card.type);
       const choiceBox = $("choiceBox");
@@ -1828,6 +1839,7 @@
       answerSubmitted = false;
       currentJudged = false;
       setJudgeButtonsEnabled(false);
+      updatePrimaryActionButton();
     }
 
     function revealCurrentAnswer(message = "已显示参考答案，请自行判断对错。") {
@@ -1881,6 +1893,7 @@
         $("frontTags").innerHTML = "";
         $("backTags").innerHTML = "";
         $("cardProgress").textContent = "第 0/0 题";
+        updatePrimaryActionButton();
         return;
       }
       $("question").innerHTML = renderQuestionBody(card);
@@ -2132,6 +2145,7 @@
 
       currentJudged = true;
       setJudgeButtonsEnabled(false);
+      updatePrimaryActionButton();
       saveData();
       $("judgeHint").textContent = isCorrect
         ? "已判定：答对。点击“下一张”继续。"
@@ -2691,10 +2705,14 @@
       const card = currentCard();
       if (!card) return;
       if (currentJudged) {
-        setStatus("当前题已判定，请点击“下一张”继续", "error");
+        nextCard(true);
         return;
       }
       const type = normalizeCardType(card.type);
+      if (answerSubmitted && !isAutoJudgeType(type)) {
+        setStatus("请先点“答对/答错”完成判定，再点“提交答案/下一张”", "error");
+        return;
+      }
       let answerText = "";
       if (type === "choice") {
         const selected = document.querySelector("input[name='choiceAnswer']:checked");
@@ -2781,7 +2799,6 @@
       $("renameDeckBtn").addEventListener("click", renameDeck);
 
       $("flipBtn").addEventListener("click", () => revealCurrentAnswer("已显示参考答案（复习模式）"));
-      $("nextBtn").addEventListener("click", () => nextCard(true));
       $("prevBtn").addEventListener("click", () => prevCard(true));
       $("knownBtn").addEventListener("click", markKnown);
       $("hardBtn").addEventListener("click", markHard);
