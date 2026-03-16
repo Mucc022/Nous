@@ -916,11 +916,12 @@
               <button id="revealBtn" class="ghost">查看参考答案</button>
             </div>
             <div id="judgeHint" class="practice-hint">先作答，再提交；然后你自己判断并点击“答对/答错”。</div>
+            <div id="manualJudgeNote" class="small hidden">请您自行判断对错，再点击“答对/答错”。</div>
             <div class="toolbar">
               <button id="prevBtn" class="secondary">上一张</button>
               <button id="flipBtn" class="secondary">复习看答案</button>
-              <button id="knownBtn" class="good">答对</button>
-              <button id="hardBtn" class="warn">答错（进错题本）</button>
+              <button id="knownBtn" class="good hidden">答对</button>
+              <button id="hardBtn" class="warn hidden">答错（进错题本）</button>
               <button id="deleteCurrentBtn" class="ghost">删除当前</button>
             </div>
             <div id="answerFeedback" class="practice-hint hidden"></div>
@@ -1794,6 +1795,15 @@
       $("hardBtn").disabled = !enabled;
     }
 
+    function updateManualJudgeUI(cardType = "") {
+      const type = normalizeCardType(cardType || currentCard()?.type || "flash");
+      const shouldShow = type === "flash" && answerSubmitted && !currentJudged;
+      $("knownBtn").classList.toggle("hidden", !shouldShow);
+      $("hardBtn").classList.toggle("hidden", !shouldShow);
+      $("manualJudgeNote").classList.toggle("hidden", !shouldShow);
+      setJudgeButtonsEnabled(shouldShow);
+    }
+
     function updatePrimaryActionButton() {
       const btn = $("submitAnswerBtn");
       if (!btn) return;
@@ -1813,7 +1823,7 @@
       $("questionTypeHint").textContent = `题型：${cardTypeLabel(type)}`;
       $("judgeHint").textContent = isAutoJudgeType(type)
         ? "提交后自动判定（蓝=正确，红=错误），错题会自动加入错题本。"
-        : "先作答，再提交；然后你自己判断并点击“答对/答错”。";
+        : "问答题提交后会出现“答对/答错”，请你自行判断。";
       choiceBox.innerHTML = "";
 
       if (type === "choice") {
@@ -1838,16 +1848,17 @@
 
       answerSubmitted = false;
       currentJudged = false;
-      setJudgeButtonsEnabled(false);
+      updateManualJudgeUI(type);
       updatePrimaryActionButton();
     }
 
-    function revealCurrentAnswer(message = "已显示参考答案，请自行判断对错。") {
+    function revealCurrentAnswer(message = "已显示参考答案，请自行判断对错。", options = {}) {
       if (!currentCard()) return;
-      answerSubmitted = true;
-      setJudgeButtonsEnabled(true);
+      const { markSubmitted = false } = options;
+      if (markSubmitted) answerSubmitted = true;
       $("flash").classList.add("flipped");
       $("judgeHint").textContent = message;
+      updateManualJudgeUI(currentCard()?.type || "flash");
     }
 
     function showAnswerFeedback(ok, customText = "") {
@@ -2144,7 +2155,7 @@
       }
 
       currentJudged = true;
-      setJudgeButtonsEnabled(false);
+      updateManualJudgeUI(card.type);
       updatePrimaryActionButton();
       saveData();
       $("judgeHint").textContent = isCorrect
@@ -2730,7 +2741,7 @@
       }
 
       if (!isAutoJudgeType(type)) {
-        revealCurrentAnswer(`你的答案：${answerText}。已显示参考答案，请点击“答对/答错”。`);
+        revealCurrentAnswer(`你的答案：${answerText}。已显示参考答案，请点击“答对/答错”。`, { markSubmitted: true });
         return;
       }
 
