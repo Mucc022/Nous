@@ -701,6 +701,73 @@
           <div class="small">提示：先点文件夹，再点“新建文件夹/卡组”，即可实现无限层级嵌套。</div>
         </section>
 
+        <section class="panel">
+          <div class="row">
+            <h2 class="title">卡组大纲（题号/跳转/删除）</h2>
+            <span class="small" id="libraryCount">0 张</span>
+          </div>
+          <div class="mini-tools">
+            <input id="jumpIndexInput" type="text" placeholder="输入题号，例如 12" style="max-width:180px;" />
+            <button id="jumpIndexBtn" class="ghost">跳转到题号</button>
+            <button id="selectAllListBtn" class="ghost">全选</button>
+            <button id="clearSelectListBtn" class="ghost">清空勾选</button>
+            <button id="deleteSelectedBtn" class="warn">删除勾选项</button>
+            <span id="selectedCountText" class="small">已勾选 0 题</span>
+          </div>
+          <div id="cardList" class="list"></div>
+        </section>
+
+        <article class="panel">
+          <div class="row">
+            <h2 class="title">AI 导入</h2>
+            <div class="toolbar" style="margin-top:0;">
+              <button id="copyPromptBtn" class="ghost">复制提示词</button>
+              <button id="toggleEditorBtn" class="ghost">显示编辑器</button>
+            </div>
+          </div>
+          <textarea id="promptTemplate" readonly></textarea>
+
+          <div class="form-grid" style="margin-top:8px;">
+            <label class="small" for="targetDeckSelect">导入目标卡组（明确指定）</label>
+            <select id="targetDeckSelect"></select>
+            <label class="small" for="importModeSelect">导入方式</label>
+            <select id="importModeSelect">
+              <option value="append">追加到当前卡组</option>
+              <option value="replace">替换当前卡组全部卡片</option>
+              <option value="newDeck" selected>新建卡组并导入（推荐）</option>
+            </select>
+            <div class="small" id="importTargetHint">目标卡组：未选择</div>
+            <div id="newDeckNameRow" style="display:none;">
+              <input id="newDeckNameInput" type="text" placeholder="新卡组名称（例如：英语-Unit 5）" />
+            </div>
+          </div>
+
+          <textarea id="bulkInput" placeholder="支持两种格式：
+1) ```json 代码块中的 JSON（推荐，支持题型）
+2) 每行一张卡：问题 | 答案 | 分类 | 标签 | 题型 | 选项A;;选项B;;选项C | 关键词1,关键词2"></textarea>
+          <div class="toolbar">
+            <button id="importBtn">导入卡片</button>
+            <button id="clearInputBtn" class="secondary">清空输入</button>
+            <button id="copyExampleBtn" class="ghost">复制格式示例</button>
+          </div>
+          <div class="form-grid" style="margin-top:8px;">
+            <label class="small" for="packageImportModeSelect">分享包导入方式</label>
+            <select id="packageImportModeSelect">
+              <option value="append">追加到当前卡组（推荐）</option>
+              <option value="replace">覆盖当前卡组</option>
+            </select>
+            <label class="small">导入分享包（JSON）</label>
+            <div class="file-row">
+              <button id="pickPackageBtn" type="button" class="ghost">选择文件</button>
+              <span id="packageFileName" class="file-name">未选择文件</span>
+              <input id="importPackageFile" type="file" accept=".json,application/json" class="hidden" />
+            </div>
+            <div id="packageDropzone" class="dropzone">或把 JSON 文件拖到这里上传</div>
+            <div class="small">支持两种文件：1) 分享包 `{ deckMeta, cards }` 2) 纯题库数组 `[ {q,a,...} ]`</div>
+          </div>
+          <div id="status" class="status"></div>
+        </article>
+
         <section class="panel hidden">
           <h2 class="title">设置</h2>
           <div class="mode-row" id="modeRow"></div>
@@ -792,117 +859,48 @@
           </div>
         </section>
 
-        <section class="work-grid">
-          <article class="panel">
-            <div class="row">
-              <h2 class="title">AI 导入</h2>
-              <div class="toolbar" style="margin-top:0;">
-                <button id="copyPromptBtn" class="ghost">复制提示词</button>
-                <button id="toggleEditorBtn" class="ghost">显示编辑器</button>
-              </div>
-            </div>
-            <textarea id="promptTemplate" readonly></textarea>
-
-            <div class="form-grid" style="margin-top:8px;">
-              <label class="small" for="targetDeckSelect">导入目标卡组（明确指定）</label>
-              <select id="targetDeckSelect"></select>
-              <label class="small" for="importModeSelect">导入方式</label>
-              <select id="importModeSelect">
-                <option value="append">追加到当前卡组</option>
-                <option value="replace">替换当前卡组全部卡片</option>
-                <option value="newDeck" selected>新建卡组并导入（推荐）</option>
-              </select>
-              <div class="small" id="importTargetHint">目标卡组：未选择</div>
-              <div id="newDeckNameRow" style="display:none;">
-                <input id="newDeckNameInput" type="text" placeholder="新卡组名称（例如：英语-Unit 5）" />
-              </div>
-            </div>
-
-            <textarea id="bulkInput" placeholder="支持两种格式：
-1) ```json 代码块中的 JSON（推荐，支持题型）
-2) 每行一张卡：问题 | 答案 | 分类 | 标签 | 题型 | 选项A;;选项B;;选项C | 关键词1,关键词2"></textarea>
-            <div class="toolbar">
-              <button id="importBtn">导入卡片</button>
-              <button id="clearInputBtn" class="secondary">清空输入</button>
-              <button id="copyExampleBtn" class="ghost">复制格式示例</button>
-            </div>
-            <div class="form-grid" style="margin-top:8px;">
-              <label class="small" for="packageImportModeSelect">分享包导入方式</label>
-              <select id="packageImportModeSelect">
-                <option value="append">追加到当前卡组（推荐）</option>
-                <option value="replace">覆盖当前卡组</option>
-              </select>
-              <label class="small">导入分享包（JSON）</label>
-              <div class="file-row">
-                <button id="pickPackageBtn" type="button" class="ghost">选择文件</button>
-                <span id="packageFileName" class="file-name">未选择文件</span>
-                <input id="importPackageFile" type="file" accept=".json,application/json" class="hidden" />
-              </div>
-              <div id="packageDropzone" class="dropzone">或把 JSON 文件拖到这里上传</div>
-              <div class="small">支持两种文件：1) 分享包 `{ deckMeta, cards }` 2) 纯题库数组 `[ {q,a,...} ]`</div>
-            </div>
-            <div id="status" class="status"></div>
-          </article>
-
-          <article class="panel hidden" id="editorPanel">
-            <div class="row">
-              <h2 class="title">卡片编辑器</h2>
-              <div class="small" id="editCardIdHint">当前：未选中卡片</div>
-            </div>
-
-            <div class="toolbar" style="margin-top:0;">
-              <button id="loadCurrentToEditorBtn" class="ghost">载入当前卡片</button>
-              <button id="newCardFromEditorBtn" class="ghost">新建卡片</button>
-            </div>
-
-            <div class="form-grid">
-              <input id="editCatInput" type="text" placeholder="分类（例如：语法-时态）" />
-              <input id="editTagsInput" type="text" placeholder="标签，用逗号分隔（例如：重点,必背）" />
-              <select id="editTypeInput">
-                <option value="flash">问答题</option>
-                <option value="choice">选择题</option>
-                <option value="cloze">挖空填空</option>
-                <option value="passage">完形题</option>
-              </select>
-              <input id="editOptionsInput" type="text" placeholder="选择题选项（用 ;; 分隔）" />
-              <input id="editKeywordsInput" type="text" placeholder="简答题关键词（逗号分隔）" />
-            </div>
-
-            <div class="editor-tools">
-              <button class="fmt-btn" data-cmd="bold">加粗</button>
-              <button class="fmt-btn" data-cmd="italic">斜体</button>
-              <button class="fmt-btn" data-cmd="underline">下划线</button>
-              <button class="fmt-btn" data-cmd="highlight">高亮</button>
-              <button class="fmt-btn" data-cmd="cloze">单词挖空</button>
-            </div>
-
-            <div class="small">问题（可编辑富文本）</div>
-            <div id="editQuestion" class="editor-box" contenteditable="true"></div>
-            <div class="small" style="margin-top:8px;">答案（可编辑富文本）</div>
-            <div id="editAnswer" class="editor-box" contenteditable="true"></div>
-
-            <div class="toolbar">
-              <button id="saveEditBtn">保存修改</button>
-            </div>
-            <div class="small">说明：挖空会把选中词替换成 <span class="cloze">_____</span>，答案保留在 `data-answer` 中。</div>
-          </article>
-        </section>
-
-        <section class="panel">
+        <article class="panel hidden" id="editorPanel">
           <div class="row">
-            <h2 class="title">卡组大纲（题号/跳转/删除）</h2>
-            <span class="small" id="libraryCount">0 张</span>
+            <h2 class="title">卡片编辑器</h2>
+            <div class="small" id="editCardIdHint">当前：未选中卡片</div>
           </div>
-          <div class="mini-tools">
-            <input id="jumpIndexInput" type="text" placeholder="输入题号，例如 12" style="max-width:180px;" />
-            <button id="jumpIndexBtn" class="ghost">跳转到题号</button>
-            <button id="selectAllListBtn" class="ghost">全选</button>
-            <button id="clearSelectListBtn" class="ghost">清空勾选</button>
-            <button id="deleteSelectedBtn" class="warn">删除勾选项</button>
-            <span id="selectedCountText" class="small">已勾选 0 题</span>
+
+          <div class="toolbar" style="margin-top:0;">
+            <button id="loadCurrentToEditorBtn" class="ghost">载入当前卡片</button>
+            <button id="newCardFromEditorBtn" class="ghost">新建卡片</button>
           </div>
-          <div id="cardList" class="list"></div>
-        </section>
+
+          <div class="form-grid">
+            <input id="editCatInput" type="text" placeholder="分类（例如：语法-时态）" />
+            <input id="editTagsInput" type="text" placeholder="标签，用逗号分隔（例如：重点,必背）" />
+            <select id="editTypeInput">
+              <option value="flash">问答题</option>
+              <option value="choice">选择题</option>
+              <option value="cloze">挖空填空</option>
+              <option value="passage">完形题</option>
+            </select>
+            <input id="editOptionsInput" type="text" placeholder="选择题选项（用 ;; 分隔）" />
+            <input id="editKeywordsInput" type="text" placeholder="简答题关键词（逗号分隔）" />
+          </div>
+
+          <div class="editor-tools">
+            <button class="fmt-btn" data-cmd="bold">加粗</button>
+            <button class="fmt-btn" data-cmd="italic">斜体</button>
+            <button class="fmt-btn" data-cmd="underline">下划线</button>
+            <button class="fmt-btn" data-cmd="highlight">高亮</button>
+            <button class="fmt-btn" data-cmd="cloze">单词挖空</button>
+          </div>
+
+          <div class="small">问题（可编辑富文本）</div>
+          <div id="editQuestion" class="editor-box" contenteditable="true"></div>
+          <div class="small" style="margin-top:8px;">答案（可编辑富文本）</div>
+          <div id="editAnswer" class="editor-box" contenteditable="true"></div>
+
+          <div class="toolbar">
+            <button id="saveEditBtn">保存修改</button>
+          </div>
+          <div class="small">说明：挖空会把选中词替换成 <span class="cloze">_____</span>，答案保留在 `data-answer` 中。</div>
+        </article>
       </main>
     </div>
   </div>
