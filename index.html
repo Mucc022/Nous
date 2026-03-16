@@ -334,7 +334,7 @@
 
     .flash {
       position: relative;
-      min-height: 380px;
+      min-height: 300px;
       transform-style: preserve-3d;
       transition: transform .45s ease;
       cursor: pointer;
@@ -390,11 +390,19 @@
     }
 
     .q {
-      font-size: 22px;
+      font-size: 25px;
       font-weight: 700;
       line-height: 1.55;
       white-space: normal;
       word-break: break-word;
+      text-align: center;
+      margin: 0 auto;
+      max-width: 96%;
+    }
+
+    .q .type-badge {
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .a {
@@ -686,8 +694,8 @@
     @media (max-width: 1060px) {
       .layout { grid-template-columns: 1fr; }
       .work-grid { grid-template-columns: 1fr; }
-      .flash { min-height: 320px; }
-      .q { font-size: 19px; }
+      .flash { min-height: 270px; }
+      .q { font-size: 21px; }
       .a { font-size: 17px; }
       .dropzone { min-height: 150px; max-height: none; }
     }
