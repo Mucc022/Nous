@@ -394,6 +394,35 @@
       font-size: 12px;
     }
 
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #e8f0ff;
+      color: #24486d;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .option-list {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      line-height: 1.6;
+      font-size: 20px;
+    }
+
+    .practice-hint {
+      margin-top: 8px;
+      border: 1px dashed #d6c8b4;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fff9f1;
+      font-size: 13px;
+      color: #5c4a39;
+    }
+
     .cloze {
       background: #fff2a8;
       border-bottom: 2px dashed #b27b00;
@@ -585,7 +614,7 @@
             <button id="exportDeckBtn" class="ghost">导出当前卡组分享包</button>
             <button id="exportBtn" class="ghost">导出全部数据 JSON</button>
           </div>
-          <div class="small">快捷键：Space 翻面，←/→ 切题，1 标记已会，2 标记再练。</div>
+          <div class="small">快捷键：Space 翻面，←/→ 切题，1 标记答对，2 标记答错。</div>
         </section>
       </aside>
 
@@ -622,10 +651,11 @@
             <button id="prevBtn" class="secondary">上一张</button>
             <button id="flipBtn" class="secondary">翻面</button>
             <button id="nextBtn">下一张</button>
-            <button id="knownBtn" class="good">我会了</button>
-            <button id="hardBtn" class="warn">再练</button>
+            <button id="knownBtn" class="good">答对</button>
+            <button id="hardBtn" class="warn">答错（进错题本）</button>
             <button id="deleteCurrentBtn" class="ghost">删除当前</button>
           </div>
+          <div id="practiceProgress" class="practice-hint">本轮练习：0 / 0，错题本：0</div>
         </section>
 
         <section class="work-grid">
@@ -650,8 +680,8 @@
             </div>
 
             <textarea id="bulkInput" placeholder="支持两种格式：
-1) ```json 代码块中的 JSON
-2) 每行一张卡：问题 | 答案 | 分类 | 标签1,标签2"></textarea>
+1) ```json 代码块中的 JSON（推荐，支持题型）
+2) 每行一张卡：问题 | 答案 | 分类 | 标签 | 题型 | 选项A;;选项B;;选项C | 关键词1,关键词2"></textarea>
             <div class="toolbar">
               <button id="importBtn">导入卡片</button>
               <button id="clearInputBtn" class="secondary">清空输入</button>
@@ -683,6 +713,14 @@
             <div class="form-grid">
               <input id="editCatInput" type="text" placeholder="分类（例如：语法-时态）" />
               <input id="editTagsInput" type="text" placeholder="标签，用逗号分隔（例如：重点,必背）" />
+              <select id="editTypeInput">
+                <option value="flash">问答题</option>
+                <option value="choice">选择题</option>
+                <option value="cloze">挖空填空</option>
+                <option value="passage">完形题</option>
+              </select>
+              <input id="editOptionsInput" type="text" placeholder="选择题选项（用 ;; 分隔）" />
+              <input id="editKeywordsInput" type="text" placeholder="简答题关键词（逗号分隔）" />
             </div>
 
             <div class="editor-tools">
@@ -730,23 +768,39 @@
     ];
 
     const aiPromptTemplate = [
-      "你是一个闪卡内容生成器。",
-      "我会给你一个知识主题，请你把知识压缩成高质量复习闪卡。",
+      "你是一个练习题生成器。",
+      "我会给你一个主题或资料，请你输出可直接导入本程序的题库。",
       "",
       "必须满足：",
       "1. 只输出一个 ```json 代码块，不要任何额外解释。",
-      "2. JSON 必须是数组，每个元素必须包含字段：q, a, cat, tags。",
-      "3. q 是问题；a 是答案；cat 是分类；tags 是字符串数组。",
-      "4. 每张卡只考一个知识点。",
+      "2. JSON 必须是数组，每个元素必须包含：q, a, cat, tags, type。",
+      "3. type 只能是：flash（问答题）/choice（选择题）/cloze（挖空填空）/passage（完形题）。",
+      "4. choice 题可额外提供 options（字符串数组）。",
+      "5. 不限制题目数量：按我提供的原材料尽可能完整覆盖知识点，材料有多少要点就尽可能生成多少题。",
+      "6. 题型由你自动判断分配：",
+      "   - 选择题：默认 4 个选项，干扰项要相近、难度偏高。",
+      "   - 填空题：若原材料出现加粗/标红/重点词，优先把这些词做成挖空。",
+      "   - 简答题（flash）：给出参考答案，并额外给 keywords（关键词数组）用于人工自评。",
+      "7. 每题只考一个知识点，题干清晰，答案简洁。",
       "",
       "输出示例：",
       "```json",
       "[",
       "  {",
-      "    \\\"q\\\": \\\"什么是牛顿第一定律？\\\",",
-      "    \\\"a\\\": \\\"若合外力为零，物体保持静止或匀速直线运动。\\\",",
-      "    \\\"cat\\\": \\\"物理-力学\\\",",
-      "    \\\"tags\\\": [\\\"经典力学\\\", \\\"基础\\\"]",
+      "    \\\"q\\\": \\\"番茄工作法一轮常见时长是？\\\",",
+      "    \\\"a\\\": \\\"25分钟专注+5分钟休息\\\",",
+      "    \\\"cat\\\": \\\"学习方法\\\",",
+      "    \\\"tags\\\": [\\\"时间管理\\\"],",
+      "    \\\"type\\\": \\\"choice\\\",",
+      "    \\\"options\\\": [\\\"10+2\\\", \\\"25+5\\\", \\\"45+10\\\", \\\"60+15\\\"]",
+      "  },",
+      "  {",
+      "    \\\"q\\\": \\\"请复述讲道准备的7个步骤\\\",",
+      "    \\\"a\\\": \\\"选经文、研读、经文主旨、分析听众、讲道主旨、目的、大纲\\\",",
+      "    \\\"cat\\\": \\\"讲道\\\",",
+      "    \\\"tags\\\": [\\\"流程\\\"],",
+      "    \\\"type\\\": \\\"flash\\\",",
+      "    \\\"keywords\\\": [\\\"选经文\\\", \\\"研读\\\", \\\"主旨\\\", \\\"听众\\\", \\\"目的\\\", \\\"大纲\\\"]",
       "  }",
       "]",
       "```",
@@ -755,8 +809,9 @@
     ].join("\n");
 
     const lineExample = [
-      "遗忘曲线的核心结论是什么？ | 如果不复习，记忆会随时间显著衰减。 | 学习方法 | 记忆,复习",
-      "什么是主动回忆？ | 不看答案先回想，再核对并纠错。 | 学习方法 | 高效学习"
+      "番茄工作法常见时长是？ | 25分钟专注+5分钟休息 | 学习方法 | 时间管理 | choice | 10+2;;25+5;;45+10;;60+15 | ",
+      "学习后第一轮复习怎么做？ | 先主动回忆，再核对纠错。 | 学习方法 | 主动回忆 | flash |  | 主动回忆;;核对纠错",
+      "若合外力为0，物体保持_____。 | 静止或匀速直线运动 | 物理-力学 | 牛顿定律 | cloze |  | "
     ].join("\n");
 
     const $ = id => document.getElementById(id);
@@ -766,6 +821,7 @@
     let cards = [];
     let knownSet = new Set();
     let hardSet = new Set();
+    let wrongBookSet = new Set();
     let srsMap = {};
 
     let selectedFolderId = "root";
@@ -773,6 +829,8 @@
     let currentMode = "all";
     let currentIndex = 0;
     let viewCards = [];
+    let practiceQueueIds = [];
+    let pendingWrongIds = [];
     let activeEditorId = "editQuestion";
 
     function uid(prefix = "id") {
@@ -803,6 +861,30 @@
       if (Array.isArray(raw)) return raw.map(x => String(x).trim()).filter(Boolean);
       return String(raw || "")
         .split(/[，,、;；]/)
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    function normalizeKeywords(raw) {
+      if (Array.isArray(raw)) return raw.map(x => String(x).trim()).filter(Boolean);
+      return String(raw || "")
+        .split(/[，,、;；]/)
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    function normalizeCardType(raw) {
+      const value = String(raw || "").trim().toLowerCase();
+      if (["choice", "mcq", "select"].includes(value)) return "choice";
+      if (["cloze", "blank", "fill"].includes(value)) return "cloze";
+      if (["passage", "completion"].includes(value)) return "passage";
+      return "flash";
+    }
+
+    function normalizeOptions(raw) {
+      if (Array.isArray(raw)) return raw.map(x => String(x).trim()).filter(Boolean);
+      return String(raw || "")
+        .split(";;")
         .map(x => x.trim())
         .filter(Boolean);
     }
@@ -884,6 +966,9 @@
               aHtml: textToHtml(a),
               cat: String(item.cat ?? item.category ?? "未分类").trim() || "未分类",
               tags: normalizeTags(item.tags),
+              type: "flash",
+              options: [],
+              keywords: [],
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
@@ -900,6 +985,9 @@
             aHtml: textToHtml("先主动回忆，再对照答案补漏。"),
             cat: "学习方法",
             tags: ["入门", "主动回忆"],
+            type: "flash",
+            options: [],
+            keywords: ["主动回忆", "核对纠错"],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           },
@@ -910,6 +998,9 @@
             aHtml: textToHtml("25 分钟专注 + 5 分钟休息。"),
             cat: "时间管理",
             tags: ["番茄钟"],
+            type: "choice",
+            options: ["10+2", "25+5", "45+10", "60+15"],
+            keywords: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }
@@ -918,6 +1009,7 @@
 
       knownSet = new Set();
       hardSet = new Set();
+      wrongBookSet = new Set();
       srsMap = {};
       selectedFolderId = "root";
       selectedDeckId = defaultDeckId;
@@ -940,6 +1032,7 @@
         cards = Array.isArray(state.cards) ? state.cards : [];
         knownSet = new Set(Array.isArray(state.known) ? state.known : []);
         hardSet = new Set(Array.isArray(state.hard) ? state.hard : []);
+        wrongBookSet = new Set(Array.isArray(state.wrongBook) ? state.wrongBook : []);
         srsMap = state.srsMap && typeof state.srsMap === "object" ? state.srsMap : {};
         selectedFolderId = state.selectedFolderId || "root";
         selectedDeckId = state.selectedDeckId || null;
@@ -959,6 +1052,7 @@
         cards,
         known: [...knownSet],
         hard: [...hardSet],
+        wrongBook: [...wrongBookSet],
         srsMap,
         selectedFolderId,
         selectedDeckId,
@@ -1024,6 +1118,9 @@
           aHtml: sanitizeRichHtml(c.aHtml || textToHtml(c.a || "")) || textToHtml("(空答案)"),
           cat: String(c.cat || "未分类").trim() || "未分类",
           tags: normalizeTags(c.tags),
+          type: normalizeCardType(c.type),
+          options: normalizeOptions(c.options),
+          keywords: normalizeKeywords(c.keywords),
           createdAt: c.createdAt || new Date().toISOString(),
           updatedAt: c.updatedAt || new Date().toISOString()
         }));
@@ -1031,6 +1128,7 @@
       const cardIds = new Set(cards.map(c => c.id));
       knownSet = new Set([...knownSet].filter(id => cardIds.has(id)));
       hardSet = new Set([...hardSet].filter(id => cardIds.has(id)));
+      wrongBookSet = new Set([...wrongBookSet].filter(id => cardIds.has(id)));
 
       const cleanedSrs = {};
       cards.forEach(c => {
@@ -1041,6 +1139,8 @@
 
       if (!folderIds.has(selectedFolderId)) selectedFolderId = "root";
       if (!deckIds.has(selectedDeckId)) selectedDeckId = decks[0].id;
+      practiceQueueIds = practiceQueueIds.filter(id => cardIds.has(id));
+      pendingWrongIds = pendingWrongIds.filter(id => cardIds.has(id));
     }
 
     function getDeckById(id) {
@@ -1193,9 +1293,24 @@
       setStatus("卡组已重命名", "ok");
     }
     function cardTextKey(card) {
-      return [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, card.deckId]
+      return [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, card.deckId, card.type, (card.options || []).join(";;"), (card.keywords || []).join(";;")]
         .map(x => String(x).trim().toLowerCase())
         .join("||");
+    }
+
+    function getCardById(cardId) {
+      return cards.find(c => c.id === cardId) || null;
+    }
+
+    function currentCard() {
+      if (!practiceQueueIds.length) return null;
+      return getCardById(practiceQueueIds[currentIndex]) || null;
+    }
+
+    function resetPracticeQueue() {
+      practiceQueueIds = viewCards.map(c => c.id);
+      pendingWrongIds = [];
+      if (currentIndex >= practiceQueueIds.length) currentIndex = Math.max(0, practiceQueueIds.length - 1);
     }
 
     function modeButtons() {
@@ -1286,7 +1401,7 @@
 
       viewCards = list;
       if (resetIndex) currentIndex = 0;
-      if (currentIndex >= viewCards.length) currentIndex = Math.max(0, viewCards.length - 1);
+      resetPracticeQueue();
 
       renderCard();
       renderStats();
@@ -1325,6 +1440,25 @@
       return tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
     }
 
+    function cardTypeLabel(type) {
+      const t = normalizeCardType(type);
+      if (t === "choice") return "选择题";
+      if (t === "cloze") return "挖空填空";
+      if (t === "passage") return "完形题";
+      return "问答题";
+    }
+
+    function renderQuestionBody(card) {
+      const type = normalizeCardType(card.type);
+      const typeTag = `<div class="type-badge">${cardTypeLabel(type)}</div>`;
+      const q = card.qHtml || "";
+      if (type !== "choice") return `${typeTag}${q}`;
+      const options = normalizeOptions(card.options);
+      if (!options.length) return `${typeTag}${q}`;
+      const list = options.map((op, idx) => `<li>${String.fromCharCode(65 + idx)}. ${escapeHtml(op)}</li>`).join("");
+      return `${typeTag}${q}<ol class="option-list">${list}</ol>`;
+    }
+
     function renderCard() {
       const flash = $("flash");
       flash.classList.remove("flipped");
@@ -1345,9 +1479,18 @@
         return;
       }
 
-      const card = viewCards[currentIndex];
-      $("question").innerHTML = card.qHtml;
-      $("answer").innerHTML = card.aHtml;
+      const card = currentCard();
+      if (!card) {
+        $("question").textContent = "本轮练习已完成";
+        $("answer").textContent = "错题本已清空，可继续下一轮";
+        $("frontTags").innerHTML = "";
+        $("backTags").innerHTML = "";
+        return;
+      }
+      $("question").innerHTML = renderQuestionBody(card);
+      const keywords = normalizeKeywords(card.keywords);
+      const keywordHtml = keywords.length ? `<div class="practice-hint"><strong>关键词：</strong>${escapeHtml(keywords.join(" / "))}</div>` : "";
+      $("answer").innerHTML = `${card.aHtml}${keywordHtml}`;
       const t = renderTags(card);
       $("frontTags").innerHTML = t;
       $("backTags").innerHTML = t;
@@ -1363,11 +1506,12 @@
         if (status === "planned") plannedCount++;
         if (status === "unplanned") unplannedCount++;
       });
-      $("currentIndex").textContent = viewCards.length ? String(currentIndex + 1) : "0";
-      $("viewCount").textContent = String(viewCards.length);
+      $("currentIndex").textContent = practiceQueueIds.length ? String(currentIndex + 1) : "0";
+      $("viewCount").textContent = String(practiceQueueIds.length);
       $("knownCount").textContent = String(plannedCount);
       $("hardCount").textContent = String(unplannedCount);
       $("libraryCount").textContent = `${deckCards.length} 张`;
+      $("practiceProgress").textContent = `本轮练习：${practiceQueueIds.length ? currentIndex + 1 : 0} / ${practiceQueueIds.length}，错题本：${wrongBookSet.size}`;
     }
 
     function sameDay(tsA, tsB) {
@@ -1436,7 +1580,7 @@
         const dueLabel = isCardDue(card.id) ? "到期" : `Lv${srsMap[card.id]?.level ?? 0}`;
         item.innerHTML = `
           <strong>${index + 1}. ${escapeHtml(htmlToText(card.qHtml).slice(0, 88))}</strong>
-          <div class="small">${escapeHtml(card.cat)}${card.tags.length ? " · " + escapeHtml(card.tags.join(", ")) : ""} · ${dueLabel}</div>
+          <div class="small">${escapeHtml(card.cat)}${card.tags.length ? " · " + escapeHtml(card.tags.join(", ")) : ""} · ${cardTypeLabel(card.type)} · ${dueLabel}</div>
         `;
         item.onclick = () => jumpToCard(card.id);
         box.appendChild(item);
@@ -1444,12 +1588,12 @@
     }
 
     function jumpToCard(cardId) {
-      let index = viewCards.findIndex(c => c.id === cardId);
+      let index = practiceQueueIds.findIndex(id => id === cardId);
       if (index < 0) {
         currentMode = "all";
         modeButtons();
         rebuildView(true);
-        index = viewCards.findIndex(c => c.id === cardId);
+        index = practiceQueueIds.findIndex(id => id === cardId);
       }
       if (index >= 0) {
         currentIndex = index;
@@ -1476,8 +1620,11 @@
     }
 
     function nextCard(playAnimation = true) {
-      if (!viewCards.length) return;
-      currentIndex = (currentIndex + 1) % viewCards.length;
+      if (!practiceQueueIds.length && viewCards.length) {
+        resetPracticeQueue();
+      }
+      if (!practiceQueueIds.length) return;
+      currentIndex = Math.min(currentIndex + 1, practiceQueueIds.length - 1);
       if (playAnimation) animateSwitch("next");
       renderCard();
       renderStats();
@@ -1485,8 +1632,11 @@
     }
 
     function prevCard(playAnimation = true) {
-      if (!viewCards.length) return;
-      currentIndex = (currentIndex - 1 + viewCards.length) % viewCards.length;
+      if (!practiceQueueIds.length && viewCards.length) {
+        resetPracticeQueue();
+      }
+      if (!practiceQueueIds.length) return;
+      currentIndex = Math.max(currentIndex - 1, 0);
       if (playAnimation) animateSwitch("prev");
       renderCard();
       renderStats();
@@ -1497,31 +1647,66 @@
       $("flash").classList.toggle("flipped");
     }
 
+    function advancePracticeAfterAnswer() {
+      if (!practiceQueueIds.length) return;
+      if (currentIndex >= practiceQueueIds.length - 1) {
+        if (pendingWrongIds.length) {
+          practiceQueueIds = practiceQueueIds.concat(pendingWrongIds);
+          pendingWrongIds = [];
+          currentIndex += 1;
+          setStatus("进入错题加练轮次，继续清空错题本", "ok");
+        } else {
+          practiceQueueIds = [];
+          currentIndex = 0;
+          setStatus("本轮完成，错题本已清空", "ok");
+        }
+      } else {
+        currentIndex += 1;
+      }
+    }
+
     function markKnown() {
-      if (!viewCards.length) return;
-      const id = viewCards[currentIndex].id;
+      const card = currentCard();
+      if (!card) return;
+      const id = card.id;
       knownSet.add(id);
       hardSet.delete(id);
+      wrongBookSet.delete(id);
       markReviewedSrs(id, true);
       saveData();
-      nextCard(true);
+      advancePracticeAfterAnswer();
+      animateSwitch("next");
+      renderCard();
+      renderStats();
+      renderStatusStrip();
+      renderEditorHint();
       renderSrsPanel();
     }
 
     function markHard() {
-      if (!viewCards.length) return;
-      const id = viewCards[currentIndex].id;
+      const card = currentCard();
+      if (!card) return;
+      const id = card.id;
       hardSet.add(id);
       knownSet.delete(id);
+      wrongBookSet.add(id);
+      pendingWrongIds.push(id);
       markReviewedSrs(id, false);
       saveData();
-      nextCard(true);
+      advancePracticeAfterAnswer();
+      animateSwitch("next");
+      renderCard();
+      renderStats();
+      renderStatusStrip();
+      renderEditorHint();
       renderSrsPanel();
     }
 
     function resetProgress() {
       knownSet = new Set();
       hardSet = new Set();
+      wrongBookSet = new Set();
+      pendingWrongIds = [];
       const fresh = {};
       cards.forEach(c => {
         fresh[c.id] = {
@@ -1533,18 +1718,22 @@
       });
       srsMap = fresh;
       saveData();
-      rebuildView(false);
+      rebuildView(true);
       setStatus("熟悉度与复习计划已重置", "ok");
     }
 
     function deleteCurrentCard() {
-      if (!viewCards.length) return;
-      const card = viewCards[currentIndex];
+      const card = currentCard();
+      if (!card) return;
       if (!confirm(`确认删除这张卡片？\n\n${htmlToText(card.qHtml).slice(0, 100)}`)) return;
 
       cards = cards.filter(c => c.id !== card.id);
       knownSet.delete(card.id);
       hardSet.delete(card.id);
+      wrongBookSet.delete(card.id);
+      practiceQueueIds = practiceQueueIds.filter(id => id !== card.id);
+      pendingWrongIds = pendingWrongIds.filter(id => id !== card.id);
+      if (currentIndex >= practiceQueueIds.length) currentIndex = Math.max(0, practiceQueueIds.length - 1);
       delete srsMap[card.id];
       saveData();
       rebuildCategoryFilter();
@@ -1559,6 +1748,7 @@
         cards,
         known: [...knownSet],
         hard: [...hardSet],
+        wrongBook: [...wrongBookSet],
         srsMap,
         exportedAt: new Date().toISOString()
       };
@@ -1579,7 +1769,10 @@
         q,
         a,
         cat: String(item?.cat ?? item?.category ?? "分享导入").trim() || "分享导入",
-        tags: normalizeTags(item?.tags)
+        tags: normalizeTags(item?.tags),
+        type: normalizeCardType(item?.type),
+        options: normalizeOptions(item?.options ?? item?.choices),
+        keywords: normalizeKeywords(item?.keywords)
       };
     }
 
@@ -1608,7 +1801,10 @@
           q: htmlToText(c.qHtml),
           a: htmlToText(c.aHtml),
           cat: c.cat,
-          tags: c.tags
+          tags: c.tags,
+          type: c.type || "flash",
+          options: c.options || [],
+          keywords: c.keywords || []
         }))
       };
 
@@ -1644,6 +1840,9 @@
         aHtml: textToHtml(item.a),
         cat: item.cat,
         tags: item.tags,
+        type: normalizeCardType(item.type),
+        options: normalizeOptions(item.options),
+        keywords: normalizeKeywords(item.keywords),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -1741,7 +1940,10 @@
           q,
           a,
           cat: parts[2] || "AI导入",
-          tags: normalizeTags(parts[3] || "")
+          tags: normalizeTags(parts[3] || ""),
+          type: parts[4] || "flash",
+          options: normalizeOptions(parts[5] || ""),
+          keywords: normalizeKeywords(parts[6] || "")
         }));
       });
       if (!cardsFromLines.length) {
@@ -1767,8 +1969,11 @@
       ids.forEach(id => {
         knownSet.delete(id);
         hardSet.delete(id);
+        wrongBookSet.delete(id);
         delete srsMap[id];
       });
+      practiceQueueIds = practiceQueueIds.filter(id => !ids.includes(id));
+      pendingWrongIds = pendingWrongIds.filter(id => !ids.includes(id));
     }
 
     function runImport() {
@@ -1832,10 +2037,6 @@
       const modeText = mode === "append" ? "追加" : mode === "replace" ? "替换" : "新建卡组导入";
       setStatus(`导入成功：${modeText}新增 ${toAdd.length} 张，跳过重复 ${duplicateCount} 张。`, "ok");
     }
-    function currentCard() {
-      return viewCards[currentIndex] || null;
-    }
-
     function renderEditorHint() {
       const card = currentCard();
       $("editCardIdHint").textContent = card
@@ -1853,6 +2054,9 @@
       $("editAnswer").innerHTML = card.aHtml;
       $("editCatInput").value = card.cat || "";
       $("editTagsInput").value = (card.tags || []).join(", ");
+      $("editTypeInput").value = normalizeCardType(card.type);
+      $("editOptionsInput").value = normalizeOptions(card.options).join(";;");
+      $("editKeywordsInput").value = normalizeKeywords(card.keywords).join(", ");
       activeEditorId = "editQuestion";
       $("editQuestion").focus();
       setStatus("已载入当前卡片到编辑器", "ok");
@@ -1877,6 +2081,9 @@
         aHtml,
         cat: $("editCatInput").value.trim() || "未分类",
         tags: normalizeTags($("editTagsInput").value),
+        type: normalizeCardType($("editTypeInput").value),
+        options: normalizeOptions($("editOptionsInput").value),
+        keywords: normalizeKeywords($("editKeywordsInput").value),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -1907,6 +2114,9 @@
       card.aHtml = aHtml;
       card.cat = $("editCatInput").value.trim() || "未分类";
       card.tags = normalizeTags($("editTagsInput").value);
+      card.type = normalizeCardType($("editTypeInput").value);
+      card.options = normalizeOptions($("editOptionsInput").value);
+      card.keywords = normalizeKeywords($("editKeywordsInput").value);
       card.updatedAt = new Date().toISOString();
 
       saveData();
