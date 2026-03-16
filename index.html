@@ -360,6 +360,8 @@
     }
 
     .face.front {
+      position: relative;
+      justify-content: flex-start;
       background: radial-gradient(circle at 90% 0%, rgba(255,233,190,.4), transparent 24%), #fffefb;
     }
 
@@ -368,16 +370,42 @@
       background: radial-gradient(circle at 0% 100%, rgba(198,226,255,.36), transparent 26%), #fafdff;
     }
 
+    .front-main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px 12px 34px;
+    }
+
+    .face.front > .small {
+      position: absolute;
+      left: 20px;
+      bottom: 16px;
+    }
+
     .card-head {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      justify-content: center;
+      align-items: center;
       gap: 8px;
       margin-bottom: 4px;
+      width: 100%;
+    }
+
+    #frontTags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .progress-chip {
-      flex-shrink: 0;
+      position: absolute;
+      top: 20px;
+      right: 20px;
       border-radius: 999px;
       border: 1px solid #d8c8b2;
       background: #fff6ea;
@@ -859,7 +887,7 @@
         <section class="card-shell" id="flashWrap">
           <div id="flash" class="flash">
             <article class="face front">
-              <div>
+              <div class="front-main">
                 <div class="card-head">
                   <div id="frontTags"></div>
                   <div id="cardProgress" class="progress-chip">第 0/0 题</div>
