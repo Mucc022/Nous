@@ -481,6 +481,22 @@
       font-size: 14px;
     }
 
+    .dropzone {
+      border: 1px dashed #ccb89f;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff9f1;
+      color: #6a5744;
+      font-size: 13px;
+      transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+    }
+
+    .dropzone.active {
+      border-color: #9f632c;
+      background: #fff2de;
+      transform: translateY(-1px);
+    }
+
     .feedback-ok {
       border-style: solid;
       border-color: #b4d9c4;
@@ -790,6 +806,7 @@
                 <span id="packageFileName" class="file-name">未选择文件</span>
                 <input id="importPackageFile" type="file" accept=".json,application/json" class="hidden" />
               </div>
+              <div id="packageDropzone" class="dropzone">或把 JSON 文件拖到这里上传</div>
               <div class="small">支持两种文件：1) 分享包 `{ deckMeta, cards }` 2) 纯题库数组 `[ {q,a,...} ]`</div>
             </div>
             <div id="status" class="status"></div>
@@ -2447,6 +2464,34 @@
         await importDeckPackageFromFile(file);
         event.target.value = "";
         if (!file) $("packageFileName").textContent = "未选择文件";
+      });
+
+      const dropzone = $("packageDropzone");
+      const onDrag = event => {
+        event.preventDefault();
+        event.stopPropagation();
+      };
+      ["dragenter", "dragover"].forEach(type => {
+        dropzone.addEventListener(type, event => {
+          onDrag(event);
+          dropzone.classList.add("active");
+        });
+      });
+      ["dragleave", "drop"].forEach(type => {
+        dropzone.addEventListener(type, event => {
+          onDrag(event);
+          dropzone.classList.remove("active");
+        });
+      });
+      dropzone.addEventListener("drop", async event => {
+        const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        if (!file) return;
+        if (!/\.json$/i.test(file.name)) {
+          setStatus("仅支持 JSON 文件", "error");
+          return;
+        }
+        $("packageFileName").textContent = file.name;
+        await importDeckPackageFromFile(file);
       });
 
       $("loadCurrentToEditorBtn").addEventListener("click", loadCurrentToEditor);
