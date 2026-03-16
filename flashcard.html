@@ -334,7 +334,7 @@
 
     .flash {
       position: relative;
-      min-height: 460px;
+      height: 460px;
       transform-style: preserve-3d;
       transition: transform .45s ease;
       cursor: pointer;
@@ -372,6 +372,7 @@
 
     .front-main {
       flex: 1;
+      height: 100%;
       width: 100%;
       display: flex;
       flex-direction: column;
@@ -561,9 +562,9 @@
 
     .feedback-ok {
       border-style: solid;
-      border-color: #b8cff8;
-      background: #edf3ff;
-      color: #264f97;
+      border-color: #b4d9c4;
+      background: #eef9f1;
+      color: #1f6e3e;
       font-weight: 700;
     }
 
@@ -573,6 +574,17 @@
       background: #fff1ee;
       color: #94382e;
       font-weight: 700;
+    }
+
+    .card-feedback {
+      position: absolute;
+      top: 76px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      width: min(90%, 520px);
+      text-align: center;
+      pointer-events: none;
     }
 
     .cloze {
@@ -722,10 +734,11 @@
     @media (max-width: 1060px) {
       .layout { grid-template-columns: 1fr; }
       .work-grid { grid-template-columns: 1fr; }
-      .flash { min-height: 360px; }
+      .flash { height: 360px; }
       .q { font-size: 21px; }
       .a { font-size: 17px; }
       .dropzone { min-height: 150px; max-height: none; }
+      .card-feedback { top: 62px; }
     }
   </style>
 </head>
@@ -759,6 +772,7 @@
             <button id="createFolderBtn" class="ghost">新建文件夹</button>
             <button id="createDeckBtn" class="ghost">新建卡组</button>
             <button id="renameDeckBtn" class="ghost">重命名卡组</button>
+            <button id="deleteFolderBtn" class="warn">删除文件夹</button>
           </div>
           <div class="tree" id="treeWrap"></div>
           <div class="small">提示：先点文件夹，再点“新建文件夹/卡组”，即可实现无限层级嵌套。</div>
@@ -904,6 +918,7 @@
               <div class="small">复习阶段可查看参考答案</div>
             </article>
           </div>
+          <div id="answerFeedback" class="practice-hint card-feedback hidden"></div>
           <div class="answer-work">
             <div class="row">
               <div id="questionTypeHint" class="muted">题型：-</div>
@@ -924,7 +939,6 @@
               <button id="hardBtn" class="warn hidden">答错（进错题本）</button>
               <button id="deleteCurrentBtn" class="ghost">删除当前</button>
             </div>
-            <div id="answerFeedback" class="practice-hint hidden"></div>
             <div id="practiceProgress" class="practice-hint hidden">本轮练习：0 / 0，错题本：0</div>
           </div>
         </section>
@@ -1627,6 +1641,56 @@
       rebuildView(false);
       setStatus("卡组已重命名", "ok");
     }
+
+    function collectFolderTreeIds(folderId) {
+      const ids = [folderId];
+      for (let i = 0; i < ids.length; i++) {
+        const cur = ids[i];
+        folderChildren(cur).forEach(f => ids.push(f.id));
+      }
+      return ids;
+    }
+
+    function deleteFolder() {
+      if (!selectedFolderId || selectedFolderId === "root") {
+        setStatus("根目录不能删除，请先选择一个子文件夹", "error");
+        return;
+      }
+
+      const folder = getFolderById(selectedFolderId);
+      if (!folder) {
+        setStatus("当前文件夹不存在", "error");
+        return;
+      }
+
+      const folderIds = collectFolderTreeIds(folder.id);
+      const folderIdSet = new Set(folderIds);
+      const deckIds = decks
+        .filter(d => folderIdSet.has(d.folderId || "root"))
+        .map(d => d.id);
+      const deckIdSet = new Set(deckIds);
+      const cardCount = cards.filter(c => deckIdSet.has(c.deckId)).length;
+
+      const msg = `确认删除文件夹「${folder.name}」吗？\n\n将删除：子文件夹 ${Math.max(0, folderIds.length - 1)} 个、卡组 ${deckIds.length} 个、卡片 ${cardCount} 张。`;
+      if (!confirm(msg)) return;
+
+      deckIds.forEach(id => removeCardsByDeck(id));
+      decks = decks.filter(d => !deckIdSet.has(d.id));
+      folders = folders.filter(f => !folderIdSet.has(f.id));
+
+      selectedFolderId = "root";
+      if (!decks.some(d => d.id === selectedDeckId)) {
+        selectedDeckId = decks[0]?.id || null;
+      }
+      ensureStateIntegrity();
+      saveData();
+      renderTree();
+      renderCurrentDeckPath();
+      rebuildCategoryFilter();
+      rebuildView(true);
+      setStatus(`已删除文件夹：${folder.name}`, "ok");
+    }
+
     function cardTextKey(card) {
       return [htmlToText(card.qHtml), htmlToText(card.aHtml), card.cat, card.deckId, card.type, (card.options || []).join(";;"), (card.keywords || []).join(";;")]
         .map(x => String(x).trim().toLowerCase())
@@ -1822,7 +1886,7 @@
       const answerInput = $("answerInput");
       $("questionTypeHint").textContent = `题型：${cardTypeLabel(type)}`;
       $("judgeHint").textContent = isAutoJudgeType(type)
-        ? "提交后自动判定（蓝=正确，红=错误），错题会自动加入错题本。"
+        ? "提交后自动判定（绿=正确，红=错误），错题会自动加入错题本。"
         : "问答题提交后会出现“答对/答错”，请你自行判断。";
       choiceBox.innerHTML = "";
 
@@ -1866,10 +1930,10 @@
       box.classList.remove("hidden", "feedback-ok", "feedback-bad");
       if (ok) {
         box.classList.add("feedback-ok");
-        box.textContent = customText || "回答正确，已进入下一题。";
+        box.textContent = customText || "回答正确";
       } else {
         box.classList.add("feedback-bad");
-        box.textContent = customText || "回答错误，已加入错题本并排到后面继续练。";
+        box.textContent = customText || "回答错误（已加入错题本）";
       }
     }
 
@@ -2808,6 +2872,7 @@
       $("createFolderBtn").addEventListener("click", createFolder);
       $("createDeckBtn").addEventListener("click", () => createDeck());
       $("renameDeckBtn").addEventListener("click", renameDeck);
+      $("deleteFolderBtn").addEventListener("click", deleteFolder);
 
       $("flipBtn").addEventListener("click", () => revealCurrentAnswer("已显示参考答案（复习模式）"));
       $("prevBtn").addEventListener("click", () => prevCard(true));
@@ -2905,6 +2970,18 @@
       $("dueOnlyToggle").addEventListener("change", () => rebuildView(true));
       $("jumpIndexInput").addEventListener("keydown", e => {
         if (e.key === "Enter") jumpByIndex();
+      });
+      $("answerInput").addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          submitCurrentAnswer();
+        }
+      });
+      $("choiceBox").addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitCurrentAnswer();
+        }
       });
 
       let searchTimer = null;
