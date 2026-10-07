@@ -2,7 +2,21 @@
 
 A single-page flashcard app for quick AI import + memory review, designed for class sharing.
 
-## Live URL (GitHub Pages)
+## Current Nous progress (2026-10-07)
+
+Active application: `nous-vnext/`; root HTML is legacy reference. Current code includes
+local-first learning, AI source/package import, decks/folders, settings/theme,
+study/review engine, reversible trash and backend/API scaffolding.
+This snapshot is code backup, not production deployment or release acceptance.
+Verified authentication, D1 user sync and full course/recovery acceptance remain pending.
+
+Start locally with Node >=22.13: `cd nous-vnext`, `npm ci`, `npm run dev`.
+Checks: `npm run test:domain`, `npx tsc --noEmit --incremental false`.
+Read `docs/00-project-memory/current-state.md` and `Codex/CODEX_MEMORY.md` for status.
+Secrets, databases, imported classroom originals, tool state, generated previews and
+the separate Questory application are intentionally excluded.
+
+## Legacy Live URL (GitHub Pages)
 
 After enabling Pages, your URL will be:
 

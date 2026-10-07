@@ -1,0 +1,7 @@
+{
+  "format": "nous-package-v0.1",
+  "contentVersion": "0.1.0",
+  "title": "Sample source-linked deck",
+  "sources": [{ "sourceId": "src_001", "sha256": "abc", "title": "Notes", "chunks": [{ "chunkId": "chunk_001", "text": "Retrieval strengthens long-term memory.", "index": 0 }] }],
+  "cards": [{ "cardId": "card_001", "title": "Retrieval", "questions": [{ "questionId": "q_001", "type": "short_answer", "prompt": "What strengthens long-term memory?", "answer": "Retrieval", "sourceRefs": [{ "sourceId": "src_001", "chunkId": "chunk_001", "quote": "Retrieval strengthens long-term memory." }] }] }]
+}

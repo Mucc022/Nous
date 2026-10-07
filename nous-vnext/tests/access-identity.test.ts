@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { verifyAccessIdentity } from '../app/domain/access-identity';
+test('Access identity requires signed subject, issuer, audience and expiry', async () => {
+  const pair = await generateKeyPair('RS256');
+  const jwk = await exportJWK(pair.publicKey);
+  const key = createLocalJWKSet({ keys: [{ ...jwk, kid: 'test', alg: 'RS256' }] });
+  const issuer = 'https://test.cloudflareaccess.com';
+  const sign = (audience: string, expiry: number) => new SignJWT({}).setProtectedHeader({ alg: 'RS256', kid: 'test' }).setSubject('user-a').setIssuer(issuer).setAudience(audience).setExpirationTime(expiry).sign(pair.privateKey);
+  const now = Math.floor(Date.now() / 1000);
+  assert.equal(await verifyAccessIdentity(await sign('app', now + 60), { issuer, audience: 'app', key }), 'user-a');
+  assert.equal(await verifyAccessIdentity(await sign('other', now + 60), { issuer, audience: 'app', key }), null);
+  assert.equal(await verifyAccessIdentity(await sign('app', now - 1), { issuer, audience: 'app', key }), null);
+  assert.equal(await verifyAccessIdentity('forged', { issuer, audience: 'app', key }), null);
+});
+test('issuer mismatch, missing expiry and foreign signing key fail closed', async () => {
+  const pair = await generateKeyPair('RS256');
+  const foreign = await generateKeyPair('RS256');
+  const key = createLocalJWKSet({ keys: [{ ...await exportJWK(pair.publicKey), kid: 'key', alg: 'RS256' }] });
+  const issuer = 'https://test.cloudflareaccess.com';
+  const config = { issuer, audience: 'app', key };
+  const builder = () => new SignJWT({}).setProtectedHeader({ alg: 'RS256', kid: 'key' }).setSubject('u').setIssuer(issuer).setAudience('app');
+  const noExpiry = await builder().sign(pair.privateKey);
+  assert.equal(await verifyAccessIdentity(noExpiry, config), null);
+  const wrongIssuer = await builder().setIssuer('https://other.cloudflareaccess.com').setExpirationTime('1m').sign(pair.privateKey);
+  assert.equal(await verifyAccessIdentity(wrongIssuer, config), null);
+  const forged = await builder().setExpirationTime('1m').sign(foreign.privateKey);
+  assert.equal(await verifyAccessIdentity(forged, config), null);
+  const unsigned = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiJ1In0.';
+  assert.equal(await verifyAccessIdentity(unsigned, config), null);
+});

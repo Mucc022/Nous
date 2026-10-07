@@ -849,7 +849,7 @@
           <div id="status" class="status"></div>
         </article>
 
-        <section class="panel hidden">
+        <section class="panel">
           <h2 class="title">设置</h2>
           <div class="mode-row" id="modeRow"></div>
           <div class="form-grid">
@@ -1917,12 +1917,14 @@
     }
 
     function revealCurrentAnswer(message = "已显示参考答案，请自行判断对错。", options = {}) {
-      if (!currentCard()) return;
+      const card = currentCard();
+      if (!card) return;
       const { markSubmitted = false } = options;
-      if (markSubmitted) answerSubmitted = true;
+      const type = normalizeCardType(card.type);
+      if (markSubmitted || type === "flash") answerSubmitted = true;
       $("flash").classList.add("flipped");
       $("judgeHint").textContent = message;
-      updateManualJudgeUI(currentCard()?.type || "flash");
+      updateManualJudgeUI(type);
     }
 
     function showAnswerFeedback(ok, customText = "") {

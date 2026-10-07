@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { enqueueRepair, advanceRepairPool } from '../app/domain/repair-pool';
+import { appendReadyRepairs } from '../app/domain/session-repair';
+import { createMemoryStorage } from '../app/domain/repository';
+import { commitReview } from '../app/domain/review-service';
+import { buildReviewEvent } from '../app/domain/review-event';
+import { LearningStateRepository, ReviewEventRepository } from '../app/domain/learning-repository';
+
+test('wrong -> two intervening questions -> repair keeps delayed retrieval due after reload', () => {
+  const storage = createMemoryStorage();
+  const cards = [{ cardId: 'c', questionIds: ['wrong', 'b', 'c'] }];
+  const wrong = buildReviewEvent({ userId: 'u', questionId: 'wrong', attemptedAt: '2026-01-01T00:00:00.000Z', correctness: 'wrong', hintLevelUsed: 0, revealedAnswer: false, userRating: 'remember', effectiveRating: 'forgot', responseTimeMs: 1000, contentVersion: '0.1.0' });
+  commitReview({ userId: 'u', storage, event: wrong, now: new Date(wrong.attemptedAt) });
+  let pool = enqueueRepair([], 'wrong');
+  assert.deepEqual(appendReadyRepairs([], cards, pool), []);
+  pool = advanceRepairPool(pool, 'b');
+  assert.deepEqual(appendReadyRepairs([], cards, pool), []);
+  pool = advanceRepairPool(pool, 'c');
+  assert.deepEqual(appendReadyRepairs([], cards, pool), [{ cardId: 'c', questionId: 'wrong', kind: 'repair' }]);
+  const repaired = buildReviewEvent({ ...wrong, attemptedAt: '2026-01-01T00:05:00.000Z', correctness: 'correct', effectiveRating: 'remember', sessionRepaired: true });
+  commitReview({ userId: 'u', storage, event: repaired, now: new Date(repaired.attemptedAt) });
+  pool = advanceRepairPool(pool, 'wrong');
+  assert.deepEqual(pool, []);
+  const restored = new LearningStateRepository('u', storage).get('wrong');
+  assert.equal(restored?.dueAt, '2026-01-01T00:30:00.000Z');
+  assert.equal(restored?.reviewLevel, 0);
+  assert.equal(restored?.successfulReviews, 0);
+  const history = new ReviewEventRepository('u', storage).list();
+  assert.equal(history.length, 2);
+  assert.equal(history[1].sessionRepaired, true);
+});

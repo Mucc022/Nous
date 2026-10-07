@@ -1,0 +1,7 @@
+{
+  "format": "nous-package-v0.1",
+  "contentVersion": "0.1.0",
+  "title": "Invalid",
+  "sources": [{ "sourceId": "src_001", "sha256": "abc", "title": "Notes", "chunks": [{ "chunkId": "chunk_001", "text": "Source text", "index": 0 }] }],
+  "cards": [{ "cardId": "card_001", "title": "Broken", "questions": [{ "questionId": "q_001", "type": "unknown", "prompt": "Broken", "answer": "x", "sourceRefs": [{ "sourceId": "src_001", "chunkId": "chunk_001", "quote": "not in source" }] }] }]
+}

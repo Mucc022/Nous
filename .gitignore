@@ -1,2 +1,24 @@
 *.bak
 *.before-v3.html
+
+# Local tools, unrelated sibling application and generated/private data
+/.agents/
+/.codex/
+/.project-runtime/
+/questory-home/
+**/node_modules/
+**/.next/
+**/.vinext/
+**/.wrangler/
+**/dist/
+**/outputs/
+**/work/
+**/coverage/
+**/.env*
+**/.dev.vars*
+**/*.tsbuildinfo
+**/*.log
+**/*.pem
+**/*.key
+**/*.sqlite*
+**/*.db
