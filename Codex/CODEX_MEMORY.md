@@ -2,6 +2,8 @@
 
 ## 2026-10-07: GitHub progress snapshot preparation
 
+Upload receipt: source snapshot 9a0415e48030bf551a1e998698834cb6cf278113 successfully pushed and independently read back from origin codex/progress-2026-10-07. 153 changed files include 133 real VNext files, no gitlinks. origin/main remains d2d1bcadabc618a4ad512918ecf9fe86ee516a97; no deployment/release performed. This receipt is a documentation-only follow-up to the source snapshot. Future backups should explicitly target the progress branch rather than default main push.
+
 User authorized uploading current Nous progress. Includes root legacy changes, descriptions and non-generated VNext source/tests/schema/migrations/configs. Nested Git metadata/history retained locally; VNext staged as real root-repository files, not a gitlink. Exclude secrets, databases, caches, tool state and separate questory-home. Target remote branch codex/progress-2026-10-07 keeps origin/main/site unchanged. Fresh 156 domain tests and non-incremental TypeScript pass; no production build/deployment or release claim. Verify upload receipt against remote branch after push.
 
 ## 2026-10-07: Updated Drive skill naming migration

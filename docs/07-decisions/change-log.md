@@ -2,6 +2,8 @@
 
 ## 2026-10-07 — GitHub progress backup
 
+Receipt: 9a0415e48030bf551a1e998698834cb6cf278113 uploaded to origin codex/progress-2026-10-07 and remote hash verified; main remains d2d1bca. No live deployment. Source coverage 133 VNext blobs; root snapshot changes 153 files.
+
 User requested complete progress upload. Root snapshot contains real VNext source rather than gitlink; nested local Git metadata preserved. Dedicated codex/progress-2026-10-07 remote branch keeps deployment main unchanged. Domain tests 156/156 and TypeScript pass; no build/live-release claim. Added ignore patterns and active-app README guidance.
 
 ## 2026-10-07 — Updated Drive skill policy

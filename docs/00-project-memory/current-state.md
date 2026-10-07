@@ -14,6 +14,8 @@ Complete the supplied Nous V1.0 learning loop and verify it before authenticated
 
 ## Stable Facts
 
+- GitHub upload confirmed: source snapshot 9a0415e on codex/progress-2026-10-07 (153 changed files, 133 VNext files). Remote main unchanged at d2d1bca. Progress branch is the current backup location, not production deployment.
+
 - 2026-10-07: User authorized GitHub progress upload; prepared codex/progress-2026-10-07 snapshot, not main/deployment. Fresh 156 domain tests and TypeScript pass. Includes active frontend/backend scaffold/docs; excludes user data/caches/secrets/unrelated Questory. Remote receipt checked after push.
 
 - 2026-10-07 updated sync: Nous-prefixed folders/files, same IDs/links; destination Nous_同步资料, 21 individual exports (6/7/8). Metadata header precedes unchanged UTF-8 body; previous byte-only export description below is historical.
